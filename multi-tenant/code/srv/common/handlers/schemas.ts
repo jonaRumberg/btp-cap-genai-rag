@@ -127,3 +127,16 @@ export const MAIL_RESPONSE_SCHEMA = z
     .describe(
         `You are working on an incoming mail addressing a travel agency. Formulate a response. Return a clean and valid JSON format.`
     );
+export const ADDITIONAL_ATTRIBUTE_SCHEMA = z
+.array(
+    z.object({
+        attribute: z.string().describe("The attribute for which the information was extracted for"),
+        returnValue: z.string().describe("This value should be extracted based on the content related to the attribute in the email.")
+    }).describe(`Extract information about a specific attribute from the content of an email. The 'explanation' defines the context of the attribute. Return a value from the 'values' string that best fits the content mentioned 
+    in the email for the specified attribute.`)
+)
+.describe(
+    `This schema pertains to processing incoming emails directed at a travel agency. Generate a structured response in clean and valid JSON format.`
+);
+
+export const ATTRIBUTE_PROMPT_SCHEMA = z.record(z.undefined())

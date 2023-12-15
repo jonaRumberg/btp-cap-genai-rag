@@ -91,7 +91,7 @@ After finishing the **.cdsrc-private.json** setup in Kyma or Cloud Foundry, plea
             "kind": "postgres",
             "credentials": {
                 "hostname": "localhost",
-                "port": 5432,
+                "port": 5433,
                 "username": "postgres",
                 "password": "postgres",
                 "dbname": "postgres"

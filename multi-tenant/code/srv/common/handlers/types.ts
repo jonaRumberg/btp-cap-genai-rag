@@ -34,6 +34,7 @@ interface ITranslatedInsight {
     sender?: String;
     summary?: String;
     keyFacts?: Array<IKeyFact>;
+    myAdditionalAttributes?: Array<IAdditionalAttributeReturn>;
     requestedServices?: Array<String>;
     responseBody?: String;
 }
@@ -50,11 +51,24 @@ interface IInsights {
     responseBody?: String;
     languageNameDetermined?: String;
     languageMatch?: Boolean;
+    myAdditionalAttributes?: Array<IAdditionalAttributeReturn>;
 }
-
 interface IKeyFact {
     fact?: string;
     category?: string;
+}
+export interface IAdditionalAttribute {
+    attribute: string;
+    explanation: string;
+    values?: IAdditionalAttributeExplanation[];
+}
+export interface IAdditionalAttributeReturn {
+    attribute?: string;
+    returnValue?: string;
+}
+export interface IAdditionalAttributeExplanation {
+    attribute?: string;
+    explanation?: string;
 }
 
 interface IAction {

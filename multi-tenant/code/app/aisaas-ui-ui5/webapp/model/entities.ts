@@ -23,6 +23,7 @@ export interface Mail {
     languageMatch: boolean;
     suggestedActions: Action[];
     keyFacts: KeyFact[];
+    myAdditionalAttributes: AdditionalAttributesReturn[];
     translation: Mail;
 }
 
@@ -36,6 +37,14 @@ export interface KeyFact {
     category: string;
     fact: string;
 }
+export interface AdditionalAttributes{
+    attribute: AttributeExplanation;
+    values?: Array<AttributeExplanation>;
+}
+export interface AdditionalAttributesReturn{
+    attribute: string;
+    returnValue: string;
+}
 
 export interface ClosestMail {
     similarity: number;
@@ -45,4 +54,8 @@ export interface ClosestMail {
 export interface FilterItem {
     id: string;
     label: string;
+}
+export interface AttributeExplanation{
+    attribute: string;
+    explanation: string;
 }

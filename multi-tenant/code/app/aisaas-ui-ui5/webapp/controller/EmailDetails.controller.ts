@@ -21,7 +21,7 @@ import PageSection from "sap/uxap/ObjectPageSection";
 import Fragment from "sap/ui/core/Fragment";
 import Dialog from "sap/m/Dialog";
 
-import { Mail, KeyFact, Action } from "../model/entities";
+import { Mail, KeyFact, Action, AdditionalAttributes, AdditionalAttributesReturn } from "../model/entities";
 import Formatter from "../model/formatter";
 
 const MAIL_ANSWERED_FRAGMENT_NAME = "aisaas.ui.view.MailAnsweredDialog";
@@ -91,22 +91,46 @@ export default class EmailDetails extends BaseController {
         parentBox.addItem(languageBox);
 
         const facts: KeyFact[] = !inTranslatedLanguage ? mail.keyFacts : mail.translation.keyFacts;
-        facts?.map((factItem: KeyFact) => {
-            const childBox: VBox = new VBox();
-            childBox.addStyleClass("sapUiTinyMarginTop sapUiMediumMarginEnd");
+        facts.map((factItem: KeyFact)=>{
+            const factBox = this.createBox(factItem.category, factItem.fact)
+            parentBox.addItem(factBox);     
+        })
 
-            const title: Title = new Title({ text: factItem.category });
-            const text: Text = new Text({
-                text: factItem.fact,
-                wrapping: true,
-                width: factItem.fact?.length > 32 ? "12.5rem" : "100%"
-            });
-            childBox.addItem(title);
-            childBox.addItem(text);
+        const myAdditionalAttributes: AdditionalAttributesReturn[] = !inTranslatedLanguage ? mail.myAdditionalAttributes : mail.translation.myAdditionalAttributes;
+        const attributePanel: Panel = new Panel({headerText:"Additional Attributes", expandable:true})
+        const horzontalBox: HBox = new HBox({ wrap: "Wrap" });
 
-            parentBox.addItem(childBox);
-        });
+
+        myAdditionalAttributes.forEach((attribute: AdditionalAttributesReturn)=>{
+            const attributeBox = this.createBox(attribute.attribute, attribute.returnValue)
+            horzontalBox.addItem(attributeBox)
+        })
+        attributePanel.addContent(horzontalBox);  
+
+        parentBox.addItem(attributePanel);   
+
     }
+
+    public createBox(t: string, value: string): VBox {
+        const capitalizeFirstLetter = (input: string): string =>
+          input
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+      
+        const childBox: VBox = new VBox({ wrap: "Wrap" });
+        childBox.addStyleClass("sapUiTinyMarginTop sapUiMediumMarginEnd");
+      
+        const title: Title = new Title({ text: capitalizeFirstLetter(t) });
+        const text: Text = new Text({
+          text: capitalizeFirstLetter(value),
+          wrapping: true,
+          width: value.length > 32 ? "12.5rem" : "100%",
+        });
+        childBox.addItem(title);
+        childBox.addItem(text);
+        return childBox;
+      }
 
     public createSuggestedActions(actions: Action[]): void {
         const hBox: HBox = this.byId("suggestedActionsBox") as HBox;

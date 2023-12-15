@@ -1,5 +1,5 @@
 import cds, { ApplicationService } from "@sap/cds";
-import { Request } from "@sap/cds/apis/services";
+import { Request } from "@sap/cds/apis/events";
 import { v4 as uuidv4 } from "uuid";
 import { DataSourceOptions } from "typeorm";
 import { z } from "zod";
@@ -18,7 +18,7 @@ import * as aiCore from "../utils/ai-core";
 import BTPEmbedding from "../utils/langchain/BTPEmbedding";
 import BTPAzureOpenAIChatLLM from "../utils/langchain/BTPAzureOpenAIChatLLM";
 
-import { IBaseMail, IProcessedMail, ITranslatedMail, IStoredMail } from "./types";
+import { IBaseMail, IProcessedMail, ITranslatedMail, IStoredMail,IAdditionalAttribute, IAdditionalAttributeReturn } from "./types";
 import * as schemas from "./schemas";
 import { actions } from "./default-values";
 
@@ -171,12 +171,15 @@ export default class CommonMailInsights extends ApplicationService {
             const { Mails } = this.entities;
             const tenant = cds.env?.requires?.multitenancy && req.tenant;
             const { mails, rag } = req.data;
-            const mailBatch = await this.regenerateInsights(mails, rag, tenant);
+            const { Attributes } = this.entities;
+            const attributes = await SELECT.from(Attributes) as Array<any> 
 
+            const mailBatch = await this.regenerateInsights(mails, attributes, rag, tenant);
+            await INSERT.into(Mails).entries(mailBatch)
+
+           
             // insert mails with insights
             console.log("UPDATE MAILS WITH INSIGHTS...");
-
-            await INSERT.into(Mails).entries(mailBatch);
 
             // Embed mail bodies with IDs
             console.log("EMBED MAILS WITH IDs...");
@@ -187,6 +190,8 @@ export default class CommonMailInsights extends ApplicationService {
                     metadata: { id: mail.ID }
                 }))
             );
+
+            console.log("EMBED MAILS WITH IDs...");
 
             const insertedMails = await SELECT.from(Mails, (m: any) => {
                 m`.*`;
@@ -206,6 +211,7 @@ export default class CommonMailInsights extends ApplicationService {
                     };
                 });
             });
+            console.log(insertedMails,);
 
             return insertedMails;
         } catch (error: any) {
@@ -247,6 +253,7 @@ export default class CommonMailInsights extends ApplicationService {
      */
     public regenerateInsights = async (
         mails: Array<IBaseMail>,
+        attributes: Array<any>,
         rag: boolean = false,
         tenant: string = DEFAULT_TENANT
     ) => {
@@ -255,29 +262,38 @@ export default class CommonMailInsights extends ApplicationService {
             return { ...mail, ID: mail.ID || uuidv4() };
         });
 
+        
+
         const [generalInsights, potentialResponses, languageMatches] = await Promise.all([
             this.extractGeneralInsights(mails, tenant),
             this.preparePotentialResponses(mails, rag, tenant),
-            this.extractLanguageMatches(mails, tenant)
+            this.extractLanguageMatches(mails, tenant),
         ]);
 
+        
+        /*const myAttributes = await (this.isIAdditionalAttributeArray(attributes) ?
+        this.extractAttributeInsightsNormalStructure(mails, tenant, attributes) :
+        this.extractAttributeInsightsDifferentStructure(mails, tenant, attributes));*/
+        
         const processedMails = mails.reduce((acc, mail)=> {
             const generalInsight = generalInsights.find((res : any) => res.mail.ID === mail.ID)?.insights;
             const potentialResponse = potentialResponses.find((res : any) => res.mail.ID === mail.ID)?.response;
             const languageMatch = languageMatches.find((res : any) => res.mail.ID === mail.ID)?.languageMatch;
+            //const myAttribute = myAttributes.find((res : any) => res.mail.ID === mail.ID)?.myAdditionalAttributes;
 
             acc.push({
                 mail,
                 insights: {
-                    ...generalInsight,
                     ...potentialResponse,
-                    ...languageMatch
+                    ...languageMatch,
+                    ...generalInsight,
+                    //myAdditionalAttributes: myAttribute,
                 }
             });
-
+        
             return acc;
         }, [] as IProcessedMail[]);
-
+       
         const translatedMails: Array<ITranslatedMail> = await this.translateInsights(processedMails, tenant);
 
         return translatedMails.map((mail) => {
@@ -288,6 +304,14 @@ export default class CommonMailInsights extends ApplicationService {
             };
         });
     };
+    public isIAdditionalAttributeArray(attributes: any): boolean {
+        return Array.isArray(attributes) &&
+            attributes.every(attr => 
+                typeof attr.attribute.attribute === 'string' &&
+                typeof attr.attribute.explanation === 'string' &&
+                typeof attr.ID === 'string' 
+            );
+    }
 
     /**
      * (Re-)Generate Response for a single Mail
@@ -395,6 +419,140 @@ export default class CommonMailInsights extends ApplicationService {
         );
 
         return mailsInsights;
+    };
+    public genereatePrompt = async (
+        attributes: any[],
+        tenant: string = DEFAULT_TENANT,
+    ): Promise<any> => {
+        const llm = new BTPAzureOpenAIChatLLM(aiCore.chatCompletion, tenant);
+        const jsonString = attributes[0].additionalattributes.map(attr => JSON.stringify(attr)).join('').replace(/[{}[\],]/g, '')
+        const systemPrompt = new PromptTemplate({template:
+            (`Create a prompt based on the provided JSON object. The prompt should contain instructions to analyze a text for the 
+            specified information provided in the JSON object. The output should be keywords based on 
+            the extracted data. Ensure that the prompt is structured to allow the return value to be an JSON Object, which contains kexwords from the original JSON object. 
+             The prompt should be designed to return a JSON object as the output.\n{format_instructions}\n
+            this is the provided JSON object: ${jsonString}`),
+            inputVariables: [], 
+
+        });
+        const systemMessagePrompt = new SystemMessagePromptTemplate({ prompt: systemPrompt });
+        const chatPrompt = ChatPromptTemplate.fromMessages([systemMessagePrompt]);
+
+        const chain = new LLMChain({
+            llm: llm,
+            prompt: chatPrompt,
+            outputKey: "text",
+        });
+
+        const response = (await chain.call(attributes)).text;
+        return {response};
+    };
+
+    public extractAttributeInsightsNormalStructure = async (
+        mails: Array<IBaseMail>, 
+        tenant: string = DEFAULT_TENANT, 
+        attributes: Array<IAdditionalAttribute>,
+    ): Promise<any> => {
+        const formatMailAttributes = (attributes: IAdditionalAttribute[]): string => {
+            const promptExtensions: string[] = [];        
+            attributes.forEach((attr: IAdditionalAttribute) => {
+                const attrInfo: string[] = [];
+                console.log(attr.attribute, attr.explanation, attr.values)
+                attrInfo.push(`The Attribute is: ${attr.attribute}. The explanation for that attribute is: ${attr.explanation}.`);
+                if(attr.values){
+                    attr.values.forEach(value => {
+                        attrInfo.push(`For the value '${value.attribute}', the explanation is: ${value.explanation}.`);
+                    });
+                }
+                promptExtensions.push(attrInfo.join(' '));
+            });
+        
+            return promptExtensions.join(", ");
+        };
+
+        console.log(attributes, 89898)
+        const parser = StructuredOutputParser.fromZodSchema(schemas.ADDITIONAL_ATTRIBUTE_SCHEMA)
+        const formatInstructions = parser.getFormatInstructions()
+        const systemPrompt = new PromptTemplate({
+                template: `Extract relevent information out of the email related to the given attributes. Return the attribute, for which the information
+                was searched for and the return value, which corresponds the most with the email text. I fnot hing could be extracted, return 'No information provided'.
+                The explanation provides detailed information about each attribute's purpose. The return value, crucial for the response,
+                resides in the 'values' array. The potential return values also have a explanation, to better understand their meaning. ${formatMailAttributes(attributes)}.\n{format_instructions}\n` +
+                "Make sure to escape special characters by double slashes.",
+                inputVariables: [],
+                partialVariables: { format_instructions: formatInstructions }
+            });
+
+        const llm = new BTPAzureOpenAIChatLLM(aiCore.chatCompletion, tenant);
+        const systemMessagePrompt = new SystemMessagePromptTemplate({ prompt: systemPrompt });
+        const humanTemplate = "{subject}\n{body}";
+        const humanMessagePrompt = HumanMessagePromptTemplate.fromTemplate(humanTemplate);
+        const chatPrompt = ChatPromptTemplate.fromMessages([systemMessagePrompt, humanMessagePrompt]);
+
+        const chain = new LLMChain({
+            llm: llm,
+            prompt: chatPrompt,
+            outputKey: "text",
+            outputParser: OutputFixingParser.fromLLM(llm, parser)
+        });
+
+        const attributeInsights = await Promise.all(
+            mails.map(async (mail: IBaseMail) => {
+                const myAdditionalAttributes: z.infer<typeof schemas.ADDITIONAL_ATTRIBUTE_SCHEMA> = (
+                    await chain.call({
+                        sender: mail.senderEmailAddress,
+                        subject: mail.subject,
+                        body: mail.body,
+                    })).text;
+                    console.log(myAdditionalAttributes, 7878)
+
+                return {mail, myAdditionalAttributes} ;
+            })
+        );
+        console.log(attributeInsights, 89891)
+
+        return attributeInsights;
+    };
+    public extractAttributeInsightsDifferentStructure = async (
+        mails: Array<IBaseMail>, 
+        tenant: string = DEFAULT_TENANT, 
+        attributes: Array<any>,
+    ): Promise<any> => {
+        
+        const parser = StructuredOutputParser.fromZodSchema(schemas.ATTRIBUTE_PROMPT_SCHEMA)
+        const formatInstructions = parser.getFormatInstructions()
+        const prompt = await this.genereatePrompt(attributes)
+        const systemPrompt = new PromptTemplate({
+            template: prompt + 'If no information could be extracted , return "no informartion provided". Return back a structured json object.',
+            inputVariables: [],
+            partialVariables: {}
+        });
+        
+        const llm = new BTPAzureOpenAIChatLLM(aiCore.chatCompletion, tenant);
+        const systemMessagePrompt = new SystemMessagePromptTemplate({ prompt: systemPrompt });
+        const humanTemplate = "{subject}\n{body}";
+        const humanMessagePrompt = HumanMessagePromptTemplate.fromTemplate(humanTemplate);
+        const chatPrompt = ChatPromptTemplate.fromMessages([systemMessagePrompt, humanMessagePrompt]);
+
+        const chain = new LLMChain({
+            llm: llm,
+            prompt: chatPrompt,
+            outputKey: "text",
+            outputParser: OutputFixingParser.fromLLM(llm, parser)
+        });
+
+        const attributeInsights = await Promise.all(
+            mails.map(async (mail: IBaseMail) => {
+                const myAdditionalAttributes: z.infer<typeof schemas.ATTRIBUTE_PROMPT_SCHEMA> = (
+                    await chain.call({
+                        sender: mail.senderEmailAddress,
+                        subject: mail.subject,
+                        body: mail.body,
+                    })).text;
+                return {mail, myAdditionalAttributes} ;
+            })
+        );
+        return attributeInsights;
     };
 
     /**
@@ -586,6 +744,7 @@ export default class CommonMailInsights extends ApplicationService {
                                 sender: mail.insights?.sender || "",
                                 summary: mail.insights?.summary || "",
                                 keyFacts: mail.insights?.keyFacts || "",
+                                myAdditionalAttributes: mail.insights?.myAdditionalAttributes || "",
                                 requestedServices: mail.insights?.requestedServices || "",
                                 responseBody: mail.insights?.responseBody || ""
                             }
@@ -738,6 +897,7 @@ const filterForTranslation = ({
     customFields,
     summary,
     keyFacts,
+    myAdditionalAttributes,
     responseBody
 }: any): object => ({
     subject,
@@ -747,6 +907,7 @@ const filterForTranslation = ({
     customFields,
     summary,
     keyFacts,
+    myAdditionalAttributes,
     responseBody
 });
 

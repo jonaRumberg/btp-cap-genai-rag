@@ -24,6 +24,13 @@
                                         <Title class="sapUiSmallMarginBegin" text="{i18n>filters.titles.settings}" />
                                     </Toolbar>
                                     <CheckBox text="{i18n>filters.texts.workIn}" selected="{/translationOn}" />
+                                    <VBox alignItems="Center" justifyContent="Center">
+                                        <Button
+                                            type="Emphasized"
+                                            text="Configure Attributes"
+                                            press="onPressNavigate"
+                                        />
+                                    </VBox>
                                 </Panel>
                                 <Panel class="sapUiNoContentPadding sapUiSmallMarginTop">
                                     <Toolbar>

@@ -382,4 +382,8 @@ export default class Main extends BaseController {
             return true;
         else return false;
     }
+    public onPressNavigate() {
+		const oRouter = this.getOwnerComponent().getRouter();
+		oRouter.navTo("configureAttributes");
+    }
 }

@@ -1,5 +1,5 @@
 using {aisaas.db as db} from '../../db/data-model';
-
+ 
 @(requires: [
     'Admin',
     'Member',

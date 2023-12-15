@@ -22,6 +22,21 @@ context aisaas.db {
             senderEmailAddress : String;
       }
 
+      type AdditionalAttribute {
+            attribute: String;
+            returnValue: String;
+      }
+
+      type AttributeExplanation{
+            attribute: String; 
+            explanation: String; 
+      }
+      entity Attributes : cuid {
+            attribute: String; 
+            explanation: String; 
+            values:    many AttributeExplanation;
+      }
+
       entity Translations : cuid {
             sender            :      String;
             subject           :      String;
@@ -30,6 +45,7 @@ context aisaas.db {
             responseBody      :      LargeString;
             keyFacts          : many KeyFact;
             requestedServices : many String;
+            myAdditionalAttributes : many AdditionalAttribute;
       }
 
       entity Mails : managed, cuid {
@@ -50,5 +66,6 @@ context aisaas.db {
             requestedServices      : many String;
             suggestedActions       : many Action;
             keyFacts               : many KeyFact;
+            myAdditionalAttributes : many AdditionalAttribute;
       }
 }

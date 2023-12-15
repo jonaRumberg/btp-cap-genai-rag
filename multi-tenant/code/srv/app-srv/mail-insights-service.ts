@@ -1,5 +1,5 @@
 import cds from "@sap/cds";
-import { Request } from "@sap/cds/apis/services";
+import { Request } from "@sap/cds/apis/events";
 
 import CommonMailInsights from "../common/handlers/common-mail-insights";
 import * as aiCore from "../common/utils/ai-core"; 

@@ -11,6 +11,12 @@
       "authenticationType": "xsuaa"
     },
     {
+      "source": "^/api/odata/v4/attributes/(.*)$",
+      "target": "/odata/v4/attributes/$1",
+      "destination": "aisaas-srv-api",
+      "authenticationType": "xsuaa"
+    },
+    {
       "source": "^/(.*)$",
       "target": "$1",
       "destination": "ui"

@@ -12,6 +12,13 @@
       "authenticationType": "xsuaa"
     },
     {
+      "source": "^/api/odata/v4/attributes/(.*)$",
+      "target": "/odata/v4/attributes/$1",
+      "destination": "aisaas-srv-api",
+      "preferLocal": true,
+      "authenticationType": "xsuaa"
+    },
+    {
       "source": "^(.*)$",
       "target": "$1",
       "service": "html5-apps-repo-rt",
