@@ -20,6 +20,7 @@
                             text="{parts: [''], formatter:'formatter.getSimilarity'}"
                             class="sapUiSmallMarginBegin"
                         />
+                        <CheckBox text="Include Answer" class="sapUiSmallMarginBegin"/>
                     </HBox>
                 </HBox>
             </Toolbar>

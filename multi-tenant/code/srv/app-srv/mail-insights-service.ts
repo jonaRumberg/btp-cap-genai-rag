@@ -71,7 +71,8 @@ export default class MailInsightsService extends CommonMailInsights {
             const { Mails } = this.entities;
             const mail = await SELECT.one.from(Mails, id);
             const response = await this.regenerateResponse(mail, rag, tenant, additionalInformation);
-            return response;
+            await UPDATE.entity(Mails).where(`ID = '${id}'`).set(response);
+            return true;
         } catch (error: any) {
             console.error(`Error: ${error?.message}`);
             return req.error(`Error: ${error?.message}`);

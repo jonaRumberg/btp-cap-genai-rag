@@ -10,6 +10,7 @@ service MailInsightsService @(
     protocol: 'odata-v4'
 ) {
     entity Mails as projection on db.Mails;
+    entity Attributes as projection on db.Attributes;
     // Get all mails (compact)
     function getMails()                                                                             returns array of Mails;
 
@@ -29,7 +30,7 @@ service MailInsightsService @(
     // Regenerate a single response
     action   regenerateResponse(id : UUID, rag : Boolean null, additionalInformation : String null) returns Mails;
     // Regenerate insights of all mails
-    action   regenerateInsights(rag : Boolean null)                                                 returns Boolean;
+    action   regenerateInsights(rag : Boolean null,attributes: array of db.AdditionalAttribute )    returns Boolean;
     // Translates response to original language
     action   translateResponse(id : UUID, response : String)                                        returns String;
     // Submits response in working language

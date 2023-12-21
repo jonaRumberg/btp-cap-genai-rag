@@ -21,7 +21,7 @@ import PageSection from "sap/uxap/ObjectPageSection";
 import Fragment from "sap/ui/core/Fragment";
 import Dialog from "sap/m/Dialog";
 
-import { Mail, KeyFact, Action, AdditionalAttributes, AdditionalAttributesReturn } from "../model/entities";
+import { Mail, KeyFact, Action, AdditionalAttributesReturn } from "../model/entities";
 import Formatter from "../model/formatter";
 
 const MAIL_ANSWERED_FRAGMENT_NAME = "aisaas.ui.view.MailAnsweredDialog";
@@ -97,6 +97,7 @@ export default class EmailDetails extends BaseController {
         })
 
         const myAdditionalAttributes: AdditionalAttributesReturn[] = !inTranslatedLanguage ? mail.myAdditionalAttributes : mail.translation.myAdditionalAttributes;
+
         const attributePanel: Panel = new Panel({headerText:"Additional Attributes", expandable:true})
         const horzontalBox: HBox = new HBox({ wrap: "Wrap" });
 

@@ -10,26 +10,51 @@ import ODataModel from "sap/ui/model/odata/v4/ODataModel";
 import VBox from "sap/m/VBox";
 import Text from "sap/m/Text";
 import RangeSlider from "sap/m/RangeSlider";
-import List from "sap/m/List";
-import StandardListItem from "sap/m/StandardListItem";
-import ListItemBase from "sap/m/ListItemBase";
 import Event from "sap/ui/base/Event";
 import RadioButtonGroup from "sap/m/RadioButtonGroup";
-
+import HBox from "sap/m/HBox";
+import JSONModel from "sap/ui/model/json/JSONModel";
 
 export default class ConfigureAttribute extends BaseController {
-    protected readonly ATTRIBUTES_ENTITY_PATH: string = "api>/getAttributes";
+    private valueToAddState: JSONModel;
+    private addedValues: Array<AttributeExplanation> = [];
 
     public onInit(): void {
-        const oTable = this.byId("attributeTable") as Table
-        const columnListItem = this.byId("columnListitem") 
         this.getView().addStyleClass(this.getOwnerComponent().getContentDensityClass());
-        
+        this.onUpdateAttributeDetailsBinding()  
+        this.valueToAddState = new JSONModel({values:[]});
+        this.setModel(this.valueToAddState, "localModel");
+    }
+
+
+    private getColumnlist(): ColumnListItem {
+        return this.byId("columnListitem") as ColumnListItem
+    }
+    private getTable(): Table {
+        return this.byId("attributeTable") as Table
+    }
+  
+    public onUpdateAttributeDetailsBinding(): void {
+        const oTable = this.getTable()
+
+        oTable.unbindItems();
+
         oTable.bindItems({
-            path: "att>/Attributes",
-            template: columnListItem,
-            templateShareable: true,
-            key: "id"
+            path: "att>/Attributes", 
+            template: this.getColumnlist(), 
+            templateShareable: true
+        });
+    }
+  
+    public setBreadCrumblink(): void {
+        const oTable = this.getTable()
+
+        oTable.unbindItems();
+
+        oTable.bindItems({
+            path: "att>/Attributes", 
+            template: this.getColumnlist(), 
+            templateShareable: true
         });
     }
 
@@ -40,18 +65,23 @@ export default class ConfigureAttribute extends BaseController {
         dialog.open();
     }
 
+    private getRadioButtonGroup(){
+        return this.byId("radioButtonGroup") as RadioButtonGroup
+    }
+
     public async onClose(dialog: Dialog){
-        const attributeInput = this.byId("attribute") as Input
-        const explanationInput = this.byId("explanation") as Input
-        attributeInput.setValue("")
-        explanationInput.setValue("")
+        this.getAttributeAndExplanationInput().attributeInput.setValue("")
+        this.getAttributeAndExplanationInput().explanationInput.setValue("")
+        
+        this.getRadioButtonGroup().setSelectedIndex(-1);
 
-        const radioButtonGroup = this.byId("radioButtonGroup") as RadioButtonGroup
-        radioButtonGroup.setVisible(false)
+        const inputBox = this.byId("inputValuesTemplate") as VBox;
+        inputBox.removeAllItems()
 
-        const valuesBox = this.byId("addedValues") as VBox
-        valuesBox.removeAllItems()
+        const valueTable = this.byId("valuesToAdd") as Table;
+        valueTable.removeAllItems()
 
+        this.setVisibilityValueElements(false, false)
         dialog.close()
     }
 
@@ -73,69 +103,42 @@ export default class ConfigureAttribute extends BaseController {
             saveButton: false
         });
 
-        const oTable = this.byId("attributeTable") as Table;
+        const oTable = this.getTable() 
         oTable.setMode("MultiSelect")
 
-        const oEditableTemplate = new ColumnListItem({
-            cells: [
-                new Input({
-                    value: "{att>ID}",
-                    editable: false,
-                    change(oEvent) {
-                        oEvent.getParameter("value")
-                    },
-                }),
-                new Input({
-                    value: "{att>attribute}"
-                }), new Input({
-                    value: "{att>explanation}",
-                    change(oEvent) {
-                        oEvent.getParameter("value")
-                    },
-                })
-            ]
-        });
-        const model = oTable.getBinding("{att>/Attributes}")
+        const oEditableTemplate = this.byId("inputListitem")
         this.rebindTable(oEditableTemplate,"Edit");
     }
   
     public onSelectionChange(): void {
-        const editButton = this.getButton("editButton");
-        const addButton = this.getButton("addButton");
-        const saveButton = this.getButton("saveButton");
-        const cancelButton = this.getButton("cancelButton");
-        const deleteButton = this.getButton("deleteButton");
-        const oTable = this.byId("attributeTable") as Table;
-    
-        const cancelDeleteSaveVisibility = !cancelButton.getVisible() && !deleteButton.getVisible() && !saveButton.getVisible();
-        const addEditVisibility = !addButton.getVisible() && !editButton.getVisible();
+        const oTable = this.getTable()
+
         const hasSelectedItems = oTable.getSelectedItems().length > 0;
         this.configureButtonVisibility( 
-            {editButton:addEditVisibility,
-            addButton: addEditVisibility,
-            cancelButton: cancelDeleteSaveVisibility,
-            deleteButton: cancelDeleteSaveVisibility,
-            saveButton: addEditVisibility && hasSelectedItems})
+            {editButton:!hasSelectedItems,
+            addButton: !hasSelectedItems,
+            cancelButton: hasSelectedItems,
+            deleteButton: hasSelectedItems,
+            saveButton: hasSelectedItems})
     }
     
     public onCancel(): void{
         this.configureButtonVisibility({
-            editButton: false,
-            addButton: false,
-            cancelButton: true,
-            deleteButton: true,
-            saveButton: true
+            editButton: true,
+            addButton: true,
+            cancelButton: false,
+            deleteButton: false,
+            saveButton: false
         });
 
         const columnListItem = this.byId("columnListitem") 
         this.rebindTable(columnListItem,"Navigation");
-        const oTable = this.byId("attributeTable") as Table;
+        const oTable = this.getTable()        
         oTable.setMode("None")
     }
 
     public rebindTable(template:any , sKeyboardMode: string) {
-        const oTable = this.byId("attributeTable") as Table
-
+        const oTable = this.getTable()
         oTable.bindItems({
             path: "att>/Attributes",
             template: template,
@@ -143,30 +146,24 @@ export default class ConfigureAttribute extends BaseController {
             key: "ID"
         });
     }
+    private getAttributeAndExplanationInput(){
+        const attributeInput = this.byId("attribute") as Input
+        const explanationInput = this.byId("explanation") as Input
+        return {attributeInput: attributeInput, explanationInput: explanationInput}
+    }
 
     public async onAddAttributes(): Promise<void> {
         const dialog = this.byId("addAttributeDialog") as Dialog;
+        const radioButtonGroup = this.getRadioButtonGroup()
 
         try {
             const model = this.getModel("att") as ODataModel;
             const httpHeaders = model.getHttpHeaders();
 
-            const attributeInput = this.byId("attribute") as Input
-            const explanationInput = this.byId("explanation") as Input
-
-            const list: List = this.byId("valuesToAddList") as List
-            const items = list.getItems() 
-
-            const values: AttributeExplanation[]= items.map((item:ListItemBase)=>{
-                if (item instanceof StandardListItem) {
-                    const attribute = item.getTitle(); 
-                    const explanation = item.getDescription(); 
-                    return { attribute, explanation };
-                }
-            })
+            const values = this.getRadioButtonText() === "Value Set" ? this.getModelValues()[0] : [];
 
             dialog.setBusy(true);
-    
+            this.onUpdateAttributeDetailsBinding()
             const response = await fetch(`${CAP_ATTRIBUTE_URL}/addAttributes`, {
                 method: "POST",
                 headers: {
@@ -175,8 +172,9 @@ export default class ConfigureAttribute extends BaseController {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    attribute: attributeInput.getValue(),
-                    explanation: explanationInput.getValue(),
+                    attribute: this.getAttributeAndExplanationInput().attributeInput.getValue(),
+                    explanation: this.getAttributeAndExplanationInput().explanationInput.getValue(),
+                    valueType: this.getRadioButtonText(),
                     values: values
                 })
             });
@@ -191,20 +189,19 @@ export default class ConfigureAttribute extends BaseController {
             MessageToast.show(this.getText("email.texts.genericErrorMessage"));
         } finally {
             dialog.setBusy(false);
+            radioButtonGroup.setSelectedIndex(-1);
         }
     }
-    public async onSave(): Promise<void> {
-        const visibilityOptions = {
+    public async onSaveAttribute(): Promise<void> {
+        this.configureButtonVisibility({
             editButton: true,
             addButton: true,
             cancelButton: false,
             deleteButton: false,
             saveButton: false
-        };
-        this.configureButtonVisibility(visibilityOptions);
+        });
     
-        const oTable = this.byId("attributeTable") as Table;
-    
+        const oTable = this.getTable()    
         try {
             oTable.setBusy(true);
     
@@ -215,14 +212,14 @@ export default class ConfigureAttribute extends BaseController {
             const promises = selectedItems.map(async (selectedItem: ColumnListItem) => {
                 const cell = selectedItem.getCells() as Input[];
                 const changedEntry: AdditionalAttributes = {
-                    attribute: {attribute:cell[1].getValue(), explanation: cell[2].getValue()},
-                };
+                    attribute: cell[1].getValue(),  explanation: cell[2].getValue(),valueType: this.getRadioButtonText(), values:[]
+                }
                 const id = cell[0].getValue();
                 return { id, changedEntry };
             });
     
             const changedElements = await Promise.all(promises);
-            console.log(changedElements);
+            this.onUpdateAttributeDetailsBinding()
     
             const response = await fetch(`${CAP_ATTRIBUTE_URL}/editAttributes`, {
                 method: "POST",
@@ -236,9 +233,10 @@ export default class ConfigureAttribute extends BaseController {
                     attributes: changedElements.map((entry: any) => entry.changedEntry)
                 })
             });
-    
+            
             if (response.ok) {
                 this.getModel("att").refresh();
+                MessageToast.show("Attribute Edited");
             } else {
                 MessageToast.show(this.getText("email.texts.genericErrorMessage"));
             }
@@ -246,29 +244,30 @@ export default class ConfigureAttribute extends BaseController {
             console.log(error);
             MessageToast.show(this.getText("email.texts.genericErrorMessage"));
         } finally {
-            oTable.setBusy(false);
+            oTable.setBusy(false)
         }
     }
 
-    public async onDeleteMode(): Promise<void> {
-        const visibilityOptions = {
+    public async onDeleteAttribute(): Promise<void> {
+        this.configureButtonVisibility({
             editButton: true,
             addButton: true,
-            cancelButton: true,
-            deleteButton: true,
+            cancelButton: false,
+            deleteButton: false,
             saveButton: false
-        };
-        this.configureButtonVisibility(visibilityOptions);
+        });
     
-        const oTable = this.byId("attributeTable") as Table;
-    
+        const oTable = this.getTable()
+
         try {
             const oDataModel = this.getModel("att") as ODataModel;
             const httpHeaders = oDataModel.getHttpHeaders();
             const selectedItems = oTable.getSelectedItems() as ColumnListItem[];
-            const ids: string[] = selectedItems.map((selectedItem: ColumnListItem) => {
-                const cell = selectedItem.getCells()[0] as Input;
-                return cell.getValue();
+
+           
+            const ids: string[]= selectedItems.map((selectedItem: ColumnListItem) => {
+                const id = selectedItem.getCells()[0] as Input;   
+                return id.getValue()
             });
     
             const response = await fetch(`${CAP_ATTRIBUTE_URL}/deleteAttribute`, {
@@ -279,7 +278,7 @@ export default class ConfigureAttribute extends BaseController {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    ids: ids
+                   ids: ids
                 })
             });
     
@@ -294,117 +293,122 @@ export default class ConfigureAttribute extends BaseController {
             MessageToast.show(this.getText("email.texts.genericErrorMessage"));
         }
     };
-    public setEnablementAddValueButton(event: Event) {
-        const attribute: string = (event.getSource() as Input).getValue();
-        const explanation = this.byId("explanation") as Input
-        const validate: boolean = attribute.trim().length > 0 && explanation.getValue().trim().length > 0;
-
-        const addValueButton = this.byId("addValueButton") as Button
-        addValueButton.setEnabled(validate);
+    
+    private getRadioButtonText(): string{
+        return this.getRadioButtonGroup().getSelectedButton().getText() as string
     }
 
-    public onSelectButton(): void {
-        const valuesBox = this.byId("inputValuesTemplate") as VBox;
-
-        const valuesInput = new Input({ placeholder: "value" });
-        const explanationInput = new Input({ placeholder: "Explanation" });
-        const rangeSliderInput = new RangeSlider({
-            min: 1,
-            max: 10,
-            range: [1, 10], 
-            width: "100%",
-            inputsAsTooltips: true
-        });
-
-        const text: string = this.getSelectedItem()
-
-        if (text === "Text Value") {
-            this.addValueInput("Value", valuesInput)
-            this.addValueInput("Explanation", explanationInput)
-        } else if (text === "Combined Value") {
-            this.addValueInput("Value", valuesInput)
-            this.addValueInput("Explanation", explanationInput)
-            this.addValueInput("Range", rangeSliderInput)
+    public selectButton(): void {        
+        const radioButtonText = this.getRadioButtonText()
+        if (radioButtonText === "Value Set") {
+            this.setVisibilityValueElements(true, false)
+            this.onAddValue()
         }
-        else if(text=== "Range Value"){
-            this.addValueInput("Range", rangeSliderInput)
+        else{
+            this.setVisibilityValueElements(true, false)
         }
+    }
 
-        const mergedExplanation = (explanation?: string, range?: number[]): string => {
-            const rangeText = range ? `The range is between ${range[0]} and ${range[1]}` : '';
-            return explanation ? explanation + ' ' + rangeText : rangeText.trim();
-        };
-    
-        const defineAttribute = (attribute?: string): string => attribute || "Range";
-    
+    private getInputValuesTemplateBox(){
+        return this.byId("inputValuesTemplate") as VBox;
+    }
+
+    public onAddValue(){
+        this.setVisibilityValueElements(true, true)
+        const valuesBox = this.getInputValuesTemplateBox()
+
+        const valuesInput = new Input({ placeholder: "Value", width:"100%" });
+        const explanationInput = new Input({ placeholder: "Explanation" , width:"100%"});
+       
+        const inputBox: HBox = new HBox({wrap: "Wrap",  width:"100%"})
+
+        const valuesInputBox = this.addValueInput("Value", valuesInput)
+        const explanationInputBox = this.addValueInput("Explanation", explanationInput)
+
+        inputBox.addItem(valuesInputBox)
+        inputBox.addItem(explanationInputBox)
+
         const saveValueButton: Button = new Button({
             text: "Save Value",
+            type: "Emphasized",
             press: () => {
-                const attribute = defineAttribute(valuesInput.getValue());
-                const explanation = mergedExplanation(explanationInput.getValue(), rangeSliderInput.getRange());
-                this.onSaveValue(attribute, explanation);
+                this.onSaveValue(
+                    valuesInput.getValue(),explanationInput.getValue(),valuesBox);
             }
-        });
-        valuesBox.addItem(saveValueButton);
-    }
-    
-    public getSelectedItem(): string{
-        const radioButton: RadioButtonGroup = this.byId("radioButtonGroup") as RadioButtonGroup
-        return radioButton.getSelectedButton().getText();
-    }
-    public addValueInput(labelText: string, input:Input | RangeSlider){
-        const valuesBox = this.byId("inputValuesTemplate") as VBox;
-        const label = new Text({ text: labelText});
-        valuesBox.addItem(label);
-        valuesBox.addItem(input);
-        label.addStyleClass("sapUiMediumMarginTop sapUiMTinymMarginEnd");
+        })
+        saveValueButton.addStyleClass("sapUiMediumMarginTop")
+        valuesBox.addItem(inputBox)
+        valuesBox.addItem(saveValueButton)
     }
 
-    public setVisibilityValueElements(addValueBoxVisibility: boolean, addAttributesButtonVisibility: boolean){
-        const addValueBox = this.byId("selectValueType") as VBox
-        addValueBox.setVisible(addValueBoxVisibility)
+    private setVisibilityValueElements(addAttributesButtonEnablement: boolean, addedValuesVisibility: boolean ){
         
+        const addedValues = this.byId("addedValues") as VBox
         const addAttributesButton = this.byId("addAttributeButton") as Button;
-        addAttributesButton.setEnabled(addAttributesButtonVisibility)
+
+        addAttributesButton.setEnabled(addAttributesButtonEnablement)
+        addedValues.setVisible(addedValuesVisibility)
+    }
+
+
+    private addValueInput(labelText: string, input:Input | RangeSlider): VBox{
+        const valuesInputBox: VBox = new VBox({wrap: "Wrap"});
+        valuesInputBox.setWidth(labelText == "Value" ? "30%" : "70%");
+
+        const label = new Text({ text: labelText});
+        valuesInputBox.addItem(label);
+        valuesInputBox.addItem(input);
+        label.addStyleClass("sapUiMediumMarginTop sapUiMTinymMarginEnd");
+        return valuesInputBox
     }
 
     public onCancelValue(): void {
-        this.setVisibilityValueElements(false, false)
+        this.setVisibilityValueElements(true, false)
     }
 
-    public onAddValue(): void {
+    public setAttributeEnabled(event: Event): void {
+        const explanationInput: number = (event.getSource() as Input).getValue().length;
+        const addAttributeButton = this.byId("addAttributeButton") as Button
+        const enablement =  explanationInput > 0
+
+        addAttributeButton.setEnabled(enablement)
+    }
+
+    public async onSaveValue(value: string, valueExplanation: string, valuesBox:VBox): Promise<void>{
         this.setVisibilityValueElements(true, true)
-    }
-
-    public async onSaveValue(attribute: string, explanation:string): Promise<void>{
-        const list: List = this.byId("valuesToAddList") as List
-        const radioButtonGroup = this.byId("radioButtonGroup") as RadioButtonGroup
-        const inputBox = this.byId("inputValuesTemplate") as VBox;
-        const valuesBox = this.byId("addedValues") as VBox;
-
-        const newListItem: StandardListItem = new StandardListItem({
-            title: attribute,
-            description: explanation
+        
+        const valueTable: Table = this.byId("valuesToAdd") as Table
+        const oRow = new ColumnListItem({
+            cells: [
+                new Text({ text: value }),
+                new Text({ text: valueExplanation })
+            ]
         });
 
-        list.addItem(newListItem)
+        valueTable.addItem(oRow);
+        const inputBox = this.getInputValuesTemplateBox();
 
         valuesBox.setVisible(true)
-        radioButtonGroup.setSelectedIndex(-1);
-        this.setVisibilityValueElements(false, true)
         inputBox.removeAllItems()
+
+        const existingValues = this.getModelValues()
+        existingValues.push(this.appendValues(value, valueExplanation));
+        this.onAddValue()
+    }
+
+    private getModelValues(){
+        const model = this.getModel("localModel")
+        return model.getProperty("/values") || [];
+    }
+
+    public appendValues(value: string, valueExplanation: string){
+        this.addedValues.push({value: value, valueExplanation: valueExplanation})
+        return this.addedValues
     }
     
     public onPressNavigate(): void {
         const oRouter = this.getOwnerComponent().getRouter();
         oRouter.navTo("main");
     }
-
-    public formatValues (values: Array<AttributeExplanation>) {
-
-        if (Array.isArray(values)) {
-            return values.map(value => value.attribute).join(', ');
-        }
-        return ""; 
-    }
+    
 }

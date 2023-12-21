@@ -105,6 +105,12 @@ export const MAIL_INSIGHTS_TRANSLATION_SCHEMA = z.object({
             category: z.string().optional().nullable()
         })
     ),
+    myAdditionalAttributes: z.array(
+        z.object({
+            attribute: z.string().optional(),
+            returnValue: z.string().optional().nullable()
+        })
+    ),
     requestedServices: z.array(z.string()),
     responseBody: z.string().transform((responseBody) => responseBody.replace(/\\\\n/g, "\n"))
 }).describe(`You are supporting a travel agency which receives emails from customers requesting help or information. 

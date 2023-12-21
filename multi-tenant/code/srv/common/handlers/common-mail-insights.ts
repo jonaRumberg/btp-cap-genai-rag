@@ -18,7 +18,7 @@ import * as aiCore from "../utils/ai-core";
 import BTPEmbedding from "../utils/langchain/BTPEmbedding";
 import BTPAzureOpenAIChatLLM from "../utils/langchain/BTPAzureOpenAIChatLLM";
 
-import { IBaseMail, IProcessedMail, ITranslatedMail, IStoredMail,IAdditionalAttribute, IAdditionalAttributeReturn } from "./types";
+import { IBaseMail, IProcessedMail, ITranslatedMail, IStoredMail,IAdditionalAttribute, IAttribute, IAdditionalAttributeExplanation } from "./types";
 import * as schemas from "./schemas";
 import { actions } from "./default-values";
 
@@ -172,11 +172,10 @@ export default class CommonMailInsights extends ApplicationService {
             const tenant = cds.env?.requires?.multitenancy && req.tenant;
             const { mails, rag } = req.data;
             const { Attributes } = this.entities;
-            const attributes = await SELECT.from(Attributes) as Array<any> 
-
+            const attributes = await SELECT.from(Attributes) as IAdditionalAttribute[]
+            
             const mailBatch = await this.regenerateInsights(mails, attributes, rag, tenant);
             await INSERT.into(Mails).entries(mailBatch)
-
            
             // insert mails with insights
             console.log("UPDATE MAILS WITH INSIGHTS...");
@@ -263,23 +262,20 @@ export default class CommonMailInsights extends ApplicationService {
         });
 
         
-
         const [generalInsights, potentialResponses, languageMatches] = await Promise.all([
             this.extractGeneralInsights(mails, tenant),
             this.preparePotentialResponses(mails, rag, tenant),
             this.extractLanguageMatches(mails, tenant),
         ]);
-
+    
         
-        /*const myAttributes = await (this.isIAdditionalAttributeArray(attributes) ?
-        this.extractAttributeInsightsNormalStructure(mails, tenant, attributes) :
-        this.extractAttributeInsightsDifferentStructure(mails, tenant, attributes));*/
-        
+        const myAttributes = await this.extractAttributeInsightsNormalStructure(mails, tenant, attributes) 
+               
         const processedMails = mails.reduce((acc, mail)=> {
             const generalInsight = generalInsights.find((res : any) => res.mail.ID === mail.ID)?.insights;
             const potentialResponse = potentialResponses.find((res : any) => res.mail.ID === mail.ID)?.response;
             const languageMatch = languageMatches.find((res : any) => res.mail.ID === mail.ID)?.languageMatch;
-            //const myAttribute = myAttributes.find((res : any) => res.mail.ID === mail.ID)?.myAdditionalAttributes;
+            const myAttribute = myAttributes.find((res : any) => res.mail.ID === mail.ID)?.myAdditionalAttributes;
 
             acc.push({
                 mail,
@@ -287,7 +283,7 @@ export default class CommonMailInsights extends ApplicationService {
                     ...potentialResponse,
                     ...languageMatch,
                     ...generalInsight,
-                    //myAdditionalAttributes: myAttribute,
+                    myAdditionalAttributes: myAttribute ,
                 }
             });
         
@@ -304,14 +300,6 @@ export default class CommonMailInsights extends ApplicationService {
             };
         });
     };
-    public isIAdditionalAttributeArray(attributes: any): boolean {
-        return Array.isArray(attributes) &&
-            attributes.every(attr => 
-                typeof attr.attribute.attribute === 'string' &&
-                typeof attr.attribute.explanation === 'string' &&
-                typeof attr.ID === 'string' 
-            );
-    }
 
     /**
      * (Re-)Generate Response for a single Mail
@@ -417,7 +405,6 @@ export default class CommonMailInsights extends ApplicationService {
                 return { mail: { ...mail }, insights: { ...insights } };
             })
         );
-
         return mailsInsights;
     };
     public genereatePrompt = async (
@@ -453,31 +440,27 @@ export default class CommonMailInsights extends ApplicationService {
         tenant: string = DEFAULT_TENANT, 
         attributes: Array<IAdditionalAttribute>,
     ): Promise<any> => {
-        const formatMailAttributes = (attributes: IAdditionalAttribute[]): string => {
-            const promptExtensions: string[] = [];        
-            attributes.forEach((attr: IAdditionalAttribute) => {
-                const attrInfo: string[] = [];
-                console.log(attr.attribute, attr.explanation, attr.values)
-                attrInfo.push(`The Attribute is: ${attr.attribute}. The explanation for that attribute is: ${attr.explanation}.`);
-                if(attr.values){
-                    attr.values.forEach(value => {
-                        attrInfo.push(`For the value '${value.attribute}', the explanation is: ${value.explanation}.`);
-                    });
-                }
-                promptExtensions.push(attrInfo.join(' '));
-            });
+        const promptExtensions: string = attributes.map((attr: IAdditionalAttribute) => {  
+            const extension: string = `The Attribute is: ${attr.attribute}. The explanation for that attribute is: ${attr.explanation}.
+                                     The attribute type is: ${attr.valueType}.`         
+            if(attributes.values.length > 0){
+                const values: string | undefined = attr.values?.map((value: IAdditionalAttributeExplanation) => 
+                `For the value '${value.value}', the explanation is: ${value.valueExplanation}.`).join("");
+                return (extension + `The values are:  ${values} `);
+            }
+            return extension
+        }).join("\n")
         
-            return promptExtensions.join(", ");
-        };
-
-        console.log(attributes, 89898)
         const parser = StructuredOutputParser.fromZodSchema(schemas.ADDITIONAL_ATTRIBUTE_SCHEMA)
         const formatInstructions = parser.getFormatInstructions()
         const systemPrompt = new PromptTemplate({
-                template: `Extract relevent information out of the email related to the given attributes. Return the attribute, for which the information
-                was searched for and the return value, which corresponds the most with the email text. I fnot hing could be extracted, return 'No information provided'.
-                The explanation provides detailed information about each attribute's purpose. The return value, crucial for the response,
-                resides in the 'values' array. The potential return values also have a explanation, to better understand their meaning. ${formatMailAttributes(attributes)}.\n{format_instructions}\n` +
+                template: `Given the specified attributes, aim to extract pertinent information from the email content based on these attributes. Each attribute comes with an associated explanation, enhancing comprehension of the intended extraction.
+                For attributes designated as 'Simple Text', retrieve text from the mail that aligns with the attribute's information, considering the provided explanation.
+                In the case of 'List' attributes, extract one or multiple concatenated text values that correlate with the attribute's information in the mail. This should be done while considering the explanation provided for the attribute.
+                If the attribute is categorized as a 'Number', retrieve a numerical value from the mail that pertains to the attribute, incorporating the provided explanation.
+                For 'Value Set' attributes, extract a string from the value array that best corresponds to the content of the email. Each value within the set is associated with an explanation, aiding in the selection of the most relevant information.
+                If no relevant information can be extracted based on the provided attributes and explanations, return 'No Information Provided'.
+                '"""${promptExtensions}.\n{format_instructions}\n"""` +
                 "Make sure to escape special characters by double slashes.",
                 inputVariables: [],
                 partialVariables: { format_instructions: formatInstructions }
@@ -504,13 +487,9 @@ export default class CommonMailInsights extends ApplicationService {
                         subject: mail.subject,
                         body: mail.body,
                     })).text;
-                    console.log(myAdditionalAttributes, 7878)
-
                 return {mail, myAdditionalAttributes} ;
             })
         );
-        console.log(attributeInsights, 89891)
-
         return attributeInsights;
     };
     public extractAttributeInsightsDifferentStructure = async (
@@ -638,7 +617,6 @@ export default class CommonMailInsights extends ApplicationService {
                 }
             })
         );
-
         return potentialResponses;
     };
 
@@ -753,7 +731,6 @@ export default class CommonMailInsights extends ApplicationService {
                 }
             })
         );
-
         return translations;
     };
 

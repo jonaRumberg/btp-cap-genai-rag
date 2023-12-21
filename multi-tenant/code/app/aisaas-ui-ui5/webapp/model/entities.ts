@@ -38,7 +38,9 @@ export interface KeyFact {
     fact: string;
 }
 export interface AdditionalAttributes{
-    attribute: AttributeExplanation;
+    attribute: string;
+    explanation: string;
+    valueType: string;
     values?: Array<AttributeExplanation>;
 }
 export interface AdditionalAttributesReturn{
@@ -56,6 +58,6 @@ export interface FilterItem {
     label: string;
 }
 export interface AttributeExplanation{
-    attribute: string;
-    explanation: string;
+    value: string;
+    valueExplanation: string;
 }

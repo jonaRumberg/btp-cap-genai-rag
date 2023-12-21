@@ -28,13 +28,14 @@ context aisaas.db {
       }
 
       type AttributeExplanation{
-            attribute: String; 
-            explanation: String; 
+            value:            String; 
+            valueExplanation: String; 
       }
       entity Attributes : cuid {
-            attribute: String; 
-            explanation: String; 
-            values:    many AttributeExplanation;
+            attribute:        String; 
+            explanation:      String; 
+            valueType:        String;
+            values:           many AttributeExplanation;
       }
 
       entity Translations : cuid {

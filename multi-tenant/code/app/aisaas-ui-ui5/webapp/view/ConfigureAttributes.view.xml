@@ -8,90 +8,108 @@
     xmlns:core="sap.ui.core"
     core:require="{ formatter:
     'aisaas/ui/model/formatter' }">
+   
     <Page title="Configure Attributes">
         <content>
-            <VBox justifyContent="Center" alignItems="Center">
-            <Table id="attributeTable" growing="true" growingThreshold="10" paste="onPaste" items="{att/Attributes}"
-            delete="onDelete"  selectionChange="onSelectionChange">
-                        <headerToolbar>
-                            <OverflowToolbar id="otbSubheader">
-                                <ToolbarSpacer />
-                                <Button id="editButton" text="Edit" type="Transparent"
-                                    press="onEdit"  visible="true"/>
-                                <Button id="addButton" text="Add" type="Transparent"
-                                    press="openAddAttributeDialog" visible="true"/>
-                                <Button id="saveButton" text="Save the selected changes" type="Transparent"
-                                    press="onSave" visible="false"/>
-                                <Button id="cancelButton" text="Cancel" type="Transparent"
-                                    press="onCancel" visible="false"/>
-                                <Button id="deleteButton" text="Delete" type="Transparent"
-                                    press="onDeleteMode" visible="false" />
-                                <Button id="addColumnButton" text="Add Column" type="Transparent"
-                                    press="" visible="false"/>
-                            </OverflowToolbar>
-                        </headerToolbar>
-                
-                        <columns>
-                            <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
-                                <Text text="ID" />
-                            </Column>
-                            <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
-                                <Text text="Attribute" />
-                            </Column>
-                            <Column demandPopin="true" width="auto" hAlign="Center">
-                                <Text text="Explanation" />
-                            </Column>
-                            <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Center">
-                                <Text text="Values" />
-                            </Column>
-                            
-                        </columns>
-                        <items>
-                            <ColumnListItem vAlign="Middle" id="columnListitem">
-                                <cells>
-                                    <ObjectIdentifier  title="{att>id}" text="{att>ID}" />
-                                    <Text text="{att>attribute}"/>
-                                    <Text text="{att>explanation}"/>
-                                    <Text text="{att>values/0}" />
-                                </cells>
-                            </ColumnListItem>
-                        </items>
-                    </Table>
+            <VBox  alignItems="Center" justifyContent="SpaceBetween">
+                <Table id="attributeTable" growing="true" 
+                growingThreshold="10" paste="onPaste" items="{att/Attributes}" selectionChange="onSelectionChange">
+                    <headerToolbar>
+                        <OverflowToolbar id="otbSubheader">
+                            <ToolbarSpacer />
+                            <Button id="editButton" text="Edit" type="Transparent"
+                                press="onEdit"  visible="true"/>
+                            <Button id="addButton" text="Add" type="Transparent"
+                                press="openAddAttributeDialog" visible="true"/>
+                            <Button id="saveButton" text="Save the selected changes" type="Transparent"
+                                press="onSave" visible="false"/>
+                            <Button id="cancelButton" text="Cancel" type="Transparent"
+                                press="onCancel" visible="false"/>
+                            <Button id="deleteButton" text="Delete" type="Transparent"
+                                press="onDeleteAttribute" visible="false" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+            
+                    <columns>
+                        <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
+                            <Text text="ID" />
+                        </Column>
+                        <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
+                            <Text text="Attribute" />
+                        </Column>
+                        <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
+                            <Text text="Explanation" />
+                        </Column>
+                        <Column minScreenWidth="Tablet" hAlign="Center" id="valueColumn" >
+                            <Text text="Values" />
+                        </Column>
+        
+                    </columns>
+                    <ColumnListItem vAlign="Middle" id="columnListitem" >
+                        <cells>
+                            <ObjectIdentifier text="{att>ID}" />
+                            <Text text="{att>attribute}" />
+                            <Text text="{att>explanation}" />
+                            <Text text="{ path: 'att>values', formatter: 'formatter.formatValues', targetType: 'any', mode : 'OneTime'}" />
+                        </cells>
+                    </ColumnListItem>
+                    <ColumnListItem vAlign="Middle" id="inputListitem" >
+                        <cells>
+                            <Input value="{att>ID}" editable="false" />
+                            <Input value="{att>attribute}" />
+                            <Input value="{att>explanation}" />
+                            <Input value="{ path: 'att>values', formatter: 'formatter.formatValues', targetType: 'any', mode : 'OneTime'}" />
+                        </cells>
+                    </ColumnListItem>
+                </Table>
                 <Button press=".onPressNavigate" text="Go Back" type="Transparent"/>
             </VBox>
         </content>
+        
     </Page>
     <Dialog id="addAttributeDialog" title="Add Attribute" contentWidth="40%">
         <content>
             <VBox class="sapUiTinyMarginTopBottom sapUiSmallMarginBeginEnd">
-                <Label text="Attribute" labelFor="attribute" showColon="true" />
-                <Input id="attribute" value="{state>/attribute}" class="sapUiTinyMarginTop" placeholder="attribute" width="32%" />
-                <Label text="Explanation" labelFor="explanation" class="sapUiSmallMarginTop" showColon="true" liveChange="setEnablementAddValueButton" change="setEnablementAddValueButton" />
-                <Input id="explanation" value="{state>/explanation}" class="sapUiTinyMarginTop" placeholder="explanation" width="100%" liveChange="setEnablementAddValueButton" change="setEnablementAddValueButton"/>
+                <HBox wrap="Wrap">
+                    <VBox width="30%" wrap="Wrap">
+                        <Label text="Attribute" showColon="true" />
+                        <Input id="attribute" value="{state>/attribute}" class="sapUiTinyMarginTop" placeholder="attribute" />
+                    </VBox>
+                    <VBox width="70%" wrap="Wrap">
+                        <Label text="Explanation" class="" showColon="true"/>
+                        <Input id="explanation" value="{state>/explanation}" class="sapUiTinyMarginTop" placeholder="explanation" liveChange="setAttributeEnabled" change="setAttributeEnabled"/>
+                    </VBox>
+                </HBox>
+                <Title text="Value Types: " class="sapUiMediumMarginTop"/>
+                <RadioButtonGroup id="radioButtonGroup" class="sapUiTinyMarginTop" select="selectButton" >
+                    <RadioButton text="Simple Text" />
+                    <RadioButton text="Value Set" />
+                    <RadioButton text="List" />
+                    <RadioButton text="Number" />
+                </RadioButtonGroup>
 
-                <VBox id="addedValues" class="sapUiTinyMarginEnd" visible="false" wrap="Wrap">
-                    <Text text="Values: "/>
-                    <List id="valuesToAddList"/>
+                <VBox id="addedValues" visible="false" wrap="Wrap" >
+                    <Title text="Values: "  class="sapUiMediumMarginTop"/>
+                    <VBox alignItems="Center">
+                        <Table id="valuesToAdd" width="100%" growing="true" growingThreshold="10" paste="onPaste" >
+                            <columns>
+                                <Column minScreenWidth="Tablet" hAlign="Center">
+                                    <Text text="Value" />
+                                </Column>
+                                <Column minScreenWidth="Tablet" hAlign="Center">
+                                    <Text text="Explanation" />
+                                </Column>
+                            </columns>
+                        </Table>
+                    </VBox>
                 </VBox>
-                <VBox visible="false" id="selectValueType">
-                    <RadioButtonGroup id="radioButtonGroup" select="onSelectButton" class="sapUiMediumMarginEnd">
-                        <RadioButton key="1" text="Range Value" />
-                        <RadioButton key="2" text="Text Value" />
-                        <RadioButton key="3" text="Combined Value" />
-                    </RadioButtonGroup>
-                    <Button text="Select Value Type" type="Emphasized" press="getSelectedItem" />
-                </VBox>
-                <VBox id="inputValuesTemplate" class="sapUiMediumMarginBottom"/>
-                <Button text="Add Value" enabled="false" type="Transparent" press="onAddValue" class="sapUiMediumMarginBottom" id="addValueButton"/>
+                <VBox id="inputValuesTemplate" class="sapUiMediumMarginBottom" alignItems="Center"/>
             </VBox>
         </content>
-        <beginButton>
-        </beginButton>
-        <beginButton>
+        <beginButton alignItems="Center">
             <Button text="Cancel" type="Emphasized" press="onCancelValue" />
-        </beginButton>
-        <beginButton>
-            <Button text="Add Attribute" type="Emphasized" press="onAddAttributes" id="addAttributeButton" />
+            <Button text="Add Attribute" type="Emphasized" press="onAddAttributes" id="addAttributeButton" enabled="false"/>
         </beginButton>
     </Dialog>
+    
 </mvc:View>

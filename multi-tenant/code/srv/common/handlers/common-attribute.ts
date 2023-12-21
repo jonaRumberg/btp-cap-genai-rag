@@ -1,7 +1,6 @@
 import cds, { ApplicationService } from "@sap/cds";
 import { Request } from "@sap/cds/apis/events";
-import { IAdditionalAttribute } from "./types";
-
+import { IAttribute } from "./types";
 
 // Default table used in PostgreSQL
 const DEFAULT_TENANT = "_main";
@@ -19,41 +18,26 @@ export default class CommonAttribute extends ApplicationService {
         await super.init();
 
         const { Attribute } = cds.entities;
+        const { Mails } = cds.entities;
 
         // Handler
         this.on("getAttributes", this.onGetAttributes);
         this.on("deleteAttribute", this.onDeleteAttributes);
         this.on("addAttributes", this.onAddAttributes);
         this.on("editAttributes", this.onEditAttributes);
-    }
+     }
 
-    /**
-     * Handler for after reading mails
-     * @param {any} mails
-     * @returns {Promise<any>}
-     */
-
+    
     private onGetAttributes = async (req: Request): Promise<any> => {
         try {
-            const { Attributes } = this.entities;
-             const attributes = await SELECT.from(Attributes).columns((a: any) => {
+            const { Attribute } = this.entities;
+            const attributes: IAttribute = await SELECT.from(Attribute).columns((a: any) => {
                 a.ID;
-                a.attribute
+                a.attribute;
+                a.explanation;
+                a.valueType;
+                a.values; 
             });
-
-            cds.tx(async () => {
-                const { Mails } = this.entities;
-                const mail = await SELECT.one.from(Mails);
-                attributes.forEach(async (attribute: IAdditionalAttribute)=>{
-                    const entry: IAdditionalAttribute = {
-                        attribute: attribute.attribute,
-                        explanation: attribute.explanation,
-                        values: attribute.values,
-                    }
-                    await UPSERT.into(Mails, mail.myAdditionalAttributes).entries(entry);
-                })
-            });
-    
             return attributes;
         } catch (error: any) {
             console.error(`Error: ${error?.message}`);
@@ -61,20 +45,15 @@ export default class CommonAttribute extends ApplicationService {
         }
     };
 
-   
-    /**
-     * Handler for adding mails
-     * @param {Request} req
-     * @returns {Promise<any>}
-     */
+  
     private onAddAttributes = async (req: Request): Promise<any> => {
         try {
             const { Attributes } = this.entities;
-            const { attribute,explanation,  values } = req.data;
-            /*const attributeBatch = (await this.regenerateAttributes(mail, tenant, additionalAttribute));*/
-            const entity: IAdditionalAttribute = {
+            const { attribute,explanation, valueType,  values } = req.data;
+            const entity: IAttribute = {
                 attribute: attribute,
                 explanation: explanation,
+                valueType: valueType,
                 values: values
             }
             await INSERT.into(Attributes).entries(entity);
@@ -87,12 +66,13 @@ export default class CommonAttribute extends ApplicationService {
 
     private onDeleteAttributes = async (req: Request): Promise<any> => {
         try {
-            const { Attributes } = this.entities;
+            const { Attributes } = this.entities;            
+            //const { Mails } = this.entities;            
             const { ids } = req.data ;
-            ids.forEach(async (id:string)=>{
+
+            ids.forEach(async (id: string)=>{
                 await DELETE.from(Attributes, id);
             })
-
             return true
         } catch (error: any) {
             console.error(`Error: ${error?.message}`);
@@ -105,9 +85,10 @@ export default class CommonAttribute extends ApplicationService {
             const { ids, attributes } = req.data;
     
             const updates = attributes.map((attribute: any, index: number) => {
-                const updatedEntity: IAdditionalAttribute = {
+                const updatedEntity: IAttribute = {
                     attribute: attribute.attribute,
                     explanation: attribute.explanation,
+                    valueType: attribute.valueType,
                     values: attribute.values
                 };
                 return UPDATE.entity(Attributes).where(`ID = '${ids[index]}'`).set(updatedEntity);

@@ -57,9 +57,13 @@ interface IKeyFact {
     fact?: string;
     category?: string;
 }
-export interface IAdditionalAttribute {
+export interface IAdditionalAttribute extends IAttribute {
+    ID: string;
+}
+export interface IAttribute {
     attribute: string;
     explanation: string;
+    valueType: string;
     values?: IAdditionalAttributeExplanation[];
 }
 export interface IAdditionalAttributeReturn {
@@ -67,8 +71,8 @@ export interface IAdditionalAttributeReturn {
     returnValue?: string;
 }
 export interface IAdditionalAttributeExplanation {
-    attribute?: string;
-    explanation?: string;
+    value: string;
+    valueExplanation?: string;
 }
 
 interface IAction {

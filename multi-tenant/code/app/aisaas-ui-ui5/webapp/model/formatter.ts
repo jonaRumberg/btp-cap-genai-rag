@@ -1,5 +1,5 @@
 import DateFormat from "sap/ui/core/format/DateFormat";
-import { FilterItem, ClosestMail } from "./entities";
+import { FilterItem, ClosestMail, AttributeExplanation } from "./entities";
 
 export default {
     formatValue: (value: string) => {
@@ -9,17 +9,23 @@ export default {
     getAvatarInitial: (sender: string) => {
         return sender ? sender[0].toUpperCase() : null;
     },
-
     formatDate: (dateString: string) => {
         const dateFormatter = DateFormat.getDateTimeInstance({ pattern: "dd.MM.yyyy" });
         return dateString ? dateFormatter.format(new Date(dateString)) : null;
     },
-
     getUrgencyIcon: (value: number) => {
         if (value && value > 1) return "sap-icon://high-priority";
         else return null;
     },
-
+    formatValues (values: Array<AttributeExplanation>) {
+        if (values && values.length > 0) {
+            const formattedValues:string = values.map(item => ("-"+ item.value+ ": "+ item.valueExplanation+ "\n")).join("");
+            return formattedValues;
+        } else {
+            return ''; 
+        }
+    },
+    
     getUrgencyText: (urgencies: FilterItem[], value: number) => {
         if (value) {
             if (value < 1) return urgencies.find((urgency: FilterItem) => urgency.id === "00").label;
