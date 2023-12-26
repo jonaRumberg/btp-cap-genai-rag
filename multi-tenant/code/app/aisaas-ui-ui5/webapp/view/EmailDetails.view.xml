@@ -114,11 +114,6 @@
                                 value="{/additionalInfo}"
                                 liveChange="onChangeAdditionalInfo"
                             />
-                            <CheckBox
-                                text="{i18n>email.texts.includeResponses}"
-                                selected="{/submittedResponsesIncluded}"
-                            />
-
                             <HBox justifyContent="End">
                                 <Button
                                     type="Emphasized"
@@ -183,22 +178,33 @@
                 <ux:subSections>
                     <ux:ObjectPageSubSection
                         title="{i18n>email.titles.similarEmails} ({/similarEmails/length})">
-                        <VBox class="sapUiTinyMarginBeginEnd">
+                        <VBox class=" sapUiTinyMarginTop sapUiMediumMarginEnd" fitContainer="true" >
+                            <SearchField
+                                value="{/searchClostestMailKeyWord}"
+                                placeholder="Search for Mails to Include in Responce"
+                                search="onClosestMailSearch"
+                            />
+                        </VBox>
+
+                        <VBox class="sapUiTinyMarginBeginEnd sapUiMediumMarginTop" id="checkboxcontainer" />
+
+                        <VBox>
                             <List
                                 id="similarEmailsList"
                                 showSeparators="None"
                                 mode="SingleSelectMaster"
                                 noDataText="{i18n>email.list.noData}"
                                 items="{
-									path: '/similarEmails',
-									sorter: {path: 'similarity', descending: 'false'}
-								}"
+                                    path: '/similarEmails',
+                                    sorter: {path: 'similarity', descending: 'false'}
+                                }"
                             >
-                                <CustomListItem class="sapUiSmallMarginTopBottom">
-                                    <core:Fragment
-                                        fragmentName="aisaas.ui.view.SimilarEmailListItem"
-                                        type="XML" />
-                                </CustomListItem>
+                            <CustomListItem>
+                                <core:Fragment
+                                    fragmentName="aisaas.ui.view.SimilarEmailListItem"
+                                    type="XML"
+                                />
+                            </CustomListItem>
                             </List>
                         </VBox>
                     </ux:ObjectPageSubSection>

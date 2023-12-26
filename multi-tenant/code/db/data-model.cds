@@ -31,6 +31,10 @@ context aisaas.db {
             value:            String; 
             valueExplanation: String; 
       }
+      type Rag{
+            number:           Int16; 
+            selected:         Boolean; 
+      }
       entity Attributes : cuid {
             attribute:        String; 
             explanation:      String; 

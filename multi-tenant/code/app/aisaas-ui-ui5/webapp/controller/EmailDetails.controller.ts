@@ -21,8 +21,10 @@ import PageSection from "sap/uxap/ObjectPageSection";
 import Fragment from "sap/ui/core/Fragment";
 import Dialog from "sap/m/Dialog";
 
-import { Mail, KeyFact, Action, AdditionalAttributesReturn } from "../model/entities";
+import { Mail, KeyFact, Action, AdditionalAttributesReturn, Rag, ClosestMail } from "../model/entities";
 import Formatter from "../model/formatter";
+import CheckBox from "sap/m/CheckBox";
+import Label from "sap/m/Label";
 
 const MAIL_ANSWERED_FRAGMENT_NAME = "aisaas.ui.view.MailAnsweredDialog";
 const ID_MAIL_ANSWERED_DIALOG = "mailAnsweredDialog";
@@ -31,6 +33,7 @@ const ID_TEXTAREA_WL = "areaWL";
 
 export default class EmailDetails extends BaseController {
     private mailAnsweredDialog: Dialog;
+    private ragObject: Array<Rag> = [];
 
     public resetEmailPageState(): void {
         this.scrollToFirstSection();
@@ -61,6 +64,14 @@ export default class EmailDetails extends BaseController {
         const translatedContentBox: HBox = this.byId("headerTranslatedContent") as HBox;
         translatedContentBox.removeAllItems();
         this.createHeaderElements(translatedContentBox, mail, true);
+    }
+    public createCheckBoxes(closestMails: ClosestMail[]): void {
+        const checkboxcontainer: VBox = this.byId("checkboxcontainer") as VBox
+        checkboxcontainer.removeAllItems();
+        this.createCheckBoxesElements(closestMails, checkboxcontainer);
+        for (let i = 1; i <= closestMails.length; i++) {
+            this.ragObject.push({number:i, selected:true})
+        } 
     }
 
     private createHeaderElements(parentBox: HBox, mail: Mail, inTranslatedLanguage: boolean): void {
@@ -194,13 +205,87 @@ export default class EmailDetails extends BaseController {
         }
     }
 
+    public createCheckBoxesElements(closestMails: ClosestMail[], checkboxcontainer: VBox){
+        const container: HBox = new HBox({wrap:"Wrap"})
+        if(closestMails.length > 0){
+            const label: Label = new Label({text:"Include Mails in Responce"})
+            checkboxcontainer.addItem(label)
+
+            const allCheckbox = new CheckBox({
+                text: "Select All",
+                selected: `{/allClosestMails}`,
+                select: () => {
+                    this.selectAllCheckBoxes(allCheckbox.getSelected(), closestMails, allCheckbox);
+                }
+            });
+
+            if(closestMails.length > 1){
+                container.addItem(allCheckbox)
+            }
+
+            for (let i = 1; i <= closestMails.length; i++) {
+                const checkbox = new CheckBox({
+                    text: i.toString(),
+                    selected: `{/mail${i}}`, 
+                    select: () => {
+                        this.getSelectedCheckbox({number: i, selected: checkbox.getSelected()}, allCheckbox);
+                    }
+                });
+                container.addItem(checkbox)
+            }
+        }
+        checkboxcontainer.addItem(container)
+    }
+
+    public getSelectedCheckbox(rag: Rag, checkbox: CheckBox){
+        const foundCheckbox = this.ragObject.find((item) => item.number === rag.number);
+        const selectedCheckbox = foundCheckbox !== undefined ? foundCheckbox : undefined;
+
+        if(selectedCheckbox){
+            selectedCheckbox.selected = rag.selected;
+        }
+        else{
+            this.ragObject.push(rag)
+        }
+        this.setAllCheckBoxes(checkbox)
+        
+        return this.ragObject
+    }
+
+    public setAllCheckBoxes(checkbox: CheckBox){
+        const isDifferent = this.ragObject.some((item, _, arr) => arr.some(otherItem => item.selected !== otherItem.selected));
+        if(isDifferent){
+            checkbox.setSelected(false)
+        }
+        else{
+            const modeSelectElements = this.ragObject.every((item: Rag )=> item.selected === true);
+            checkbox.setSelected(modeSelectElements)
+        }
+    }
+
+    public selectAllCheckBoxes(mode: boolean, closestMails: ClosestMail[], checkbox:CheckBox){
+        const localModel: JSONModel = this.getModel() as JSONModel;
+        const allCheckBoxes: string[] = []
+        for (let i = 1; i <= closestMails.length; i++) {
+            allCheckBoxes.push(`/mail${i}`)
+            this.getSelectedCheckbox({number:i, selected: mode}, checkbox)
+        }
+
+        allCheckBoxes.forEach((mailCheckBox: string)=>{
+            localModel.setProperty(mailCheckBox, mode)
+        })
+    }
+
     public async onPressRegenerate(): Promise<void> {
         const oDataModel = this.getModel("api") as ODataModel;
         const localModel: JSONModel = this.getModel() as JSONModel;
-
+        
         const responsePreparation = this.byId("responsePreparationSection") as PageSection;
         responsePreparation.setBusy(true);
         const httpHeaders: any = oDataModel.getHttpHeaders();
+        
+        const rag: boolean = this.ragObject.some((r: Rag) => r.selected === true)
+        const selectedMails = this.ragObject.filter((rag) => rag.selected).map((rag: Rag)=> {return rag.number})
 
         try {
             const response = await fetch(`${CAP_BASE_URL}/regenerateResponse`, {
@@ -211,7 +296,7 @@ export default class EmailDetails extends BaseController {
                 },
                 body: JSON.stringify({
                     id: localModel.getProperty("/activeEmailId"),
-                    rag: localModel.getProperty("/submittedResponsesIncluded"),
+                    selectedMails: selectedMails,
                     additionalInformation: localModel.getProperty("/additionalInfo")
                 })
             });
@@ -241,6 +326,16 @@ export default class EmailDetails extends BaseController {
                 null
             );
         }
+    }
+
+    public async onClosestMailSearch(): Promise<void> {
+        if (this.hasResponseChanged()) {
+            await this.openConfirmationDialog(
+                this.getText("confirmationDialog.texts.triggerFilterMessage"),
+                this.applyFilter.bind(this),
+                () => this.restoreSearchFilter()
+            );
+        } else this.applyFilter();
     }
 
     /* To submit response for finalization */

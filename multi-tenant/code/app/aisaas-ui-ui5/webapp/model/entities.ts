@@ -57,6 +57,10 @@ export interface FilterItem {
     id: string;
     label: string;
 }
+export interface Rag {
+    number: number;
+    selected: boolean;
+}
 export interface AttributeExplanation{
     value: string;
     valueExplanation: string;

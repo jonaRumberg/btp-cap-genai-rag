@@ -28,7 +28,7 @@ service MailInsightsService @(
     // Add new mails
     action   addMails(mails : array of db.BaseMail, rag : Boolean null)                             returns array of Mails;
     // Regenerate a single response
-    action   regenerateResponse(id : UUID, rag : Boolean null, additionalInformation : String null) returns Mails;
+    action   regenerateResponse(id : UUID, selectedMails : array of Int16, additionalInformation : String null) returns Mails;
     // Regenerate insights of all mails
     action   regenerateInsights(rag : Boolean null,attributes: array of db.AdditionalAttribute )    returns Boolean;
     // Translates response to original language

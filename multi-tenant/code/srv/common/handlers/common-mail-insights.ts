@@ -18,7 +18,7 @@ import * as aiCore from "../utils/ai-core";
 import BTPEmbedding from "../utils/langchain/BTPEmbedding";
 import BTPAzureOpenAIChatLLM from "../utils/langchain/BTPAzureOpenAIChatLLM";
 
-import { IBaseMail, IProcessedMail, ITranslatedMail, IStoredMail,IAdditionalAttribute, IAttribute, IAdditionalAttributeExplanation } from "./types";
+import { IBaseMail, IProcessedMail, ITranslatedMail, IStoredMail,IAdditionalAttribute, IAdditionalAttributeExplanation } from "./types";
 import * as schemas from "./schemas";
 import { actions } from "./default-values";
 
@@ -210,7 +210,6 @@ export default class CommonMailInsights extends ApplicationService {
                     };
                 });
             });
-            console.log(insertedMails,);
 
             return insertedMails;
         } catch (error: any) {
@@ -252,8 +251,9 @@ export default class CommonMailInsights extends ApplicationService {
      */
     public regenerateInsights = async (
         mails: Array<IBaseMail>,
-        attributes: Array<any>,
+        attributes: Array<IAdditionalAttribute>,
         rag: boolean = false,
+        selectedMails: number[] = [],
         tenant: string = DEFAULT_TENANT
     ) => {
         // Add unique ID to mails if not existent
@@ -264,12 +264,12 @@ export default class CommonMailInsights extends ApplicationService {
         
         const [generalInsights, potentialResponses, languageMatches] = await Promise.all([
             this.extractGeneralInsights(mails, tenant),
-            this.preparePotentialResponses(mails, rag, tenant),
+            this.preparePotentialResponses(mails, rag, selectedMails, tenant),
             this.extractLanguageMatches(mails, tenant),
         ]);
     
         
-        const myAttributes = await this.extractAttributeInsightsNormalStructure(mails, tenant, attributes) 
+        const myAttributes = attributes.length > 0 ? await this.extractAttributeInsightsNormalStructure(mails, tenant, attributes): [] 
                
         const processedMails = mails.reduce((acc, mail)=> {
             const generalInsight = generalInsights.find((res : any) => res.mail.ID === mail.ID)?.insights;
@@ -311,11 +311,13 @@ export default class CommonMailInsights extends ApplicationService {
      */
     public regenerateResponse = async (
         mail: IStoredMail,
-        rag: boolean = false,
+        selectedMails: number[] = [],
         tenant: string = DEFAULT_TENANT,
         additionalInformation?: string
     ): Promise<IStoredMail> => {
         const { Translations } = this.entities;
+        const rag = selectedMails.length > 0 ? true : false;
+        
         const regeneratedResponse = (
             await this.preparePotentialResponses(
                 [
@@ -327,6 +329,7 @@ export default class CommonMailInsights extends ApplicationService {
                     }
                 ],
                 rag,
+                selectedMails,
                 tenant,
                 additionalInformation
             )
@@ -334,14 +337,9 @@ export default class CommonMailInsights extends ApplicationService {
 
         //@ts-ignore
         const translation = await SELECT.one.from(Translations, mail.translation_ID);
-
-        if (!mail.languageMatch) {
-            translation.responseBody = (
-                await this.translateResponse(regeneratedResponse, tenant, schemas.WORKING_LANGUAGE)
-            ).responseBody;
-        } else {
-            translation.responseBody = regeneratedResponse;
-        }
+        const translatedResponse = translation.responseBody = (
+            await this.translateResponse(regeneratedResponse, tenant, schemas.WORKING_LANGUAGE)
+        ).responseBody;
 
         // Add default descriptions for actions
         mail.suggestedActions = mail.suggestedActions?.map((suggestedAction: any) => {
@@ -353,7 +351,7 @@ export default class CommonMailInsights extends ApplicationService {
 
         return {
             ...mail,
-            responseBody: regeneratedResponse,
+            responseBody: translatedResponse,
             translation: translation
         };
     };
@@ -545,6 +543,7 @@ export default class CommonMailInsights extends ApplicationService {
     public preparePotentialResponses = async (
         mails: Array<IBaseMail>,
         rag: boolean = false,
+        selectedMails: number[] = [],
         tenant: string = DEFAULT_TENANT,
         additionalInformation?: string
     ): Promise<any> => {
@@ -589,8 +588,10 @@ export default class CommonMailInsights extends ApplicationService {
         const potentialResponses = await Promise.all(
             mails.map(async (mail: IBaseMail) => {
                 if (rag) {
-                    const closestMails = await this.getClosestMails(mail.ID, 5, { submitted: true }, tenant);
-                    const closestResponses = await this.getClosestResponses(closestMails);
+                    const closestMails = await this.getClosestMails(mail.ID, 5,{}, tenant)
+                    
+                    const selectedClosestMails = selectedMails.length > 0 ? selectedMails.map(n => closestMails[n]) : closestMails;
+                    const closestResponses = await this.getClosestResponses(selectedClosestMails)
 
                     const result = (
                         await chain.call({
@@ -601,6 +602,7 @@ export default class CommonMailInsights extends ApplicationService {
                             input_documents: closestResponses
                         })
                     ).text;
+
                     const response = await parser.parse(fixJsonString(result));
 
                     return { mail, response };

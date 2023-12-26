@@ -49,13 +49,14 @@ export default class Main extends BaseController {
             activeSentiments: [],
             activeRequestStates: [],
             searchKeyword: null,
+            searchClostestMailKeyWord: null,
             emailsCount: 0,
             sortDescending: false,
             sortText: null,
             activeEmailId: null,
             translationOn: false,
             additionalInfo: null,
-            submittedResponsesIncluded: false,
+            submittedResponsesIncluded: [],
             responseBody: null,
             translatedResponseBody: null,
             similarEmails: []
@@ -141,15 +142,34 @@ export default class Main extends BaseController {
             .getObject() as EmailObject;
 
         this.emailController.createEmailHeaderContent(emailObject.mail);
+        this.emailController.createCheckBoxes(emailObject.closestMails);
         this.emailController.createSuggestedActions(emailObject.mail.suggestedActions);
         localModel.setProperty("/additionalInfo", null);
-        localModel.setProperty("/submittedResponsesIncluded", true);
+        this.setMailCheckboxes(emailObject)
         localModel.setProperty("/responseBody", emailObject.mail.responseBody);
         localModel.setProperty("/translatedResponseBody", emailObject.mail.translation.responseBody);
         localModel.setProperty("/similarEmails", emailObject.closestMails);
     }
 
+    public setMailCheckboxes(emailObject: EmailObject){
+        const localModel: JSONModel = this.getModel() as JSONModel;
+        localModel.setProperty("/allClosestMails", true)
+
+        for (let i = 1; i <= emailObject.closestMails.length; i++) {
+            localModel.setProperty(`/mail${i}`, true)
+        }
+    }
+
     public async onSearch(): Promise<void> {
+        if (this.hasResponseChanged()) {
+            await this.openConfirmationDialog(
+                this.getText("confirmationDialog.texts.triggerFilterMessage"),
+                this.applyFilter.bind(this),
+                () => this.restoreSearchFilter()
+            );
+        } else this.applyFilter();
+    }
+    public async onSearchClosestMail(): Promise<void> {
         if (this.hasResponseChanged()) {
             await this.openConfirmationDialog(
                 this.getText("confirmationDialog.texts.triggerFilterMessage"),

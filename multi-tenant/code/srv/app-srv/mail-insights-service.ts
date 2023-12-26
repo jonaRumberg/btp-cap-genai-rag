@@ -67,10 +67,10 @@ export default class MailInsightsService extends CommonMailInsights {
     private onRegenerateResponse = async (req: Request) => {
         try {
             const tenant = cds.env?.requires?.multitenancy && req.tenant;
-            const { id, rag, additionalInformation } = req.data;
+            const { id, selectedMails, additionalInformation } = req.data;
             const { Mails } = this.entities;
             const mail = await SELECT.one.from(Mails, id);
-            const response = await this.regenerateResponse(mail, rag, tenant, additionalInformation);
+            const response = await this.regenerateResponse(mail, selectedMails, tenant, additionalInformation);
             await UPDATE.entity(Mails).where(`ID = '${id}'`).set(response);
             return true;
         } catch (error: any) {
