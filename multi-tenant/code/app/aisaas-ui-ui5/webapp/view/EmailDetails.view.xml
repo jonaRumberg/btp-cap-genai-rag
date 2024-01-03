@@ -188,25 +188,6 @@
 
                         <VBox class="sapUiTinyMarginBeginEnd sapUiMediumMarginTop" id="checkboxcontainer" />
 
-                        <VBox>
-                            <List
-                                id="similarEmailsList"
-                                showSeparators="None"
-                                mode="SingleSelectMaster"
-                                noDataText="{i18n>email.list.noData}"
-                                items="{
-                                    path: '/similarEmails',
-                                    sorter: {path: 'similarity', descending: 'false'}
-                                }"
-                            >
-                            <CustomListItem>
-                                <core:Fragment
-                                    fragmentName="aisaas.ui.view.SimilarEmailListItem"
-                                    type="XML"
-                                />
-                            </CustomListItem>
-                            </List>
-                        </VBox>
                     </ux:ObjectPageSubSection>
                 </ux:subSections>
             </ux:ObjectPageSection>
@@ -235,4 +216,72 @@
         visible="{= !${/activeEmailId} }">
         <Label text="{i18n>email.texts.noEmail}" />
     </FlexBox>
+
+    <Dialog id="similarMailDialog" title="{i18n>addMailDialog.title}" contentWidth="40%">
+        <content>
+            <VBox>
+                <SearchField
+                    value="{/searchKeywordSimilarMails}"
+                    placeholder="{i18n>inbox.searchField.placeholder}"
+                    search="onSearchSimilarMail"
+                    liveChange="onEmptyFoundMails"
+                />
+                <List
+                    id="addedEmailsList"
+                    mode="SingleSelectMaster"
+                    showSeparators="Inner"
+                    visible="{= ${/addedMailsToResponse}.length > 1 }"
+                    noDataText="{i18n>email.list.noData}"
+                    items="{
+                        path: '/addedMailsToResponse'
+                    }"
+                >
+                    <CustomListItem>
+                        <core:Fragment
+                            fragmentName="aisaas.ui.view.AddedEmailListItem"
+                            type="XML"
+                        />
+                    </CustomListItem>
+                </List>
+                <List
+                    id="foundEmailsList"
+                    showSeparators="None"
+                    mode="SingleSelectMaster"
+                    noDataText="{i18n>email.list.noData}"
+                    items="{
+                        path: '/similarEmails',
+                        sorter: {path: 'similarity', descending: 'false'}
+                    }"
+                >
+                    <CustomListItem>
+                        <core:Fragment
+                            fragmentName="aisaas.ui.view.SimilarEmailListItem"
+                            type="XML"
+                        />
+                    </CustomListItem>
+                </List>
+                <List
+                    id="foundEmails"
+                    showSeparators="None"
+                    mode="SingleSelectMaster"
+                    visible="{= ${/foundMails}.length > 1 }"
+                    noDataText="{i18n>email.list.noData}"
+                    items="{
+                        path: '/foundEmails',
+                        sorter: {path: 'similarity', descending: 'false'}
+                    }"
+                >
+                    <CustomListItem>
+                        <core:Fragment
+                            fragmentName="aisaas.ui.view.SimilarEmailListItem"
+                            type="XML"
+                        />
+                    </CustomListItem>
+                </List>
+            </VBox>
+        </content>
+        <beginButton>
+            <Button text="{i18n>email.buttons.confirm}" type="Emphasized" press="onAddMail" />
+        </beginButton>
+    </Dialog>
 </mvc:View>

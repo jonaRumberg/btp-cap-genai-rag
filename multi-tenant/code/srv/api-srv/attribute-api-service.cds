@@ -19,6 +19,5 @@ service AttributeApiService @(
     };
 
     action   deleteAttribute(ids : many String)                                                                 returns Boolean;
-    action   editAttributes(ids : many String, attributes :  array of Attributes)                               returns array of Attributes;
     action   addAttributes(attribute : String, explanation : String, valueType : String, values : array of db.AttributeExplanation) returns array of Attributes;
 }

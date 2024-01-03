@@ -253,7 +253,7 @@ export default class CommonMailInsights extends ApplicationService {
         mails: Array<IBaseMail>,
         attributes: Array<IAdditionalAttribute>,
         rag: boolean = false,
-        selectedMails: number[] = [],
+        selectedMails: string[] = [],
         tenant: string = DEFAULT_TENANT
     ) => {
         // Add unique ID to mails if not existent
@@ -311,7 +311,7 @@ export default class CommonMailInsights extends ApplicationService {
      */
     public regenerateResponse = async (
         mail: IStoredMail,
-        selectedMails: number[] = [],
+        selectedMails: string[] = [],
         tenant: string = DEFAULT_TENANT,
         additionalInformation?: string
     ): Promise<IStoredMail> => {
@@ -543,7 +543,7 @@ export default class CommonMailInsights extends ApplicationService {
     public preparePotentialResponses = async (
         mails: Array<IBaseMail>,
         rag: boolean = false,
-        selectedMails: number[] = [],
+        selectedMails: string[] = [],
         tenant: string = DEFAULT_TENANT,
         additionalInformation?: string
     ): Promise<any> => {
@@ -587,19 +587,14 @@ export default class CommonMailInsights extends ApplicationService {
 
         const potentialResponses = await Promise.all(
             mails.map(async (mail: IBaseMail) => {
-                if (rag) {
-                    const closestMails = await this.getClosestMails(mail.ID, 5,{}, tenant)
-                    
-                    const selectedClosestMails = selectedMails.length > 0 ? selectedMails.map(n => closestMails[n]) : closestMails;
-                    const closestResponses = await this.getClosestResponses(selectedClosestMails)
-
+                if (rag) {                    
                     const result = (
                         await chain.call({
                             sender: mail.senderEmailAddress,
                             subject: mail.subject,
                             body: mail.body,
                             additionalInformation: additionalInformation || "",
-                            input_documents: closestResponses
+                            input_documents: selectedMails
                         })
                     ).text;
 
@@ -860,7 +855,39 @@ export default class CommonMailInsights extends ApplicationService {
         }
         return results;
     };
+
+    public getFoundMail = async (
+        id: string,
+        k: number = 5,
+        searchKeywordSimilarMails: string = "", 
+        filter: any = {},
+        tenant?: string
+    ): Promise<Array<[TypeORMVectorStoreDocument, number]>> => {
+        const typeormVectorStore = await this.getVectorStore(tenant);
+
+        const queryString = `
+        SELECT x.id, x."pageContent", x.metadata, x.embedding <=> focus.embedding as _distance from ${typeormVectorStore.tableName} as x
+        join (SELECT * from ${typeormVectorStore.tableName} where (metadata->'id')::jsonb ? $1) as focus
+        on focus.id != x.id
+        WHERE x.metadata @> $2 AND 
+        x."pageContent" LIKE $3
+        ORDER BY _distance LIMIT $4;
+        `;
+
+        const documents = await typeormVectorStore.appDataSource.query(queryString, [id, filter, `'${searchKeywordSimilarMails}'`,  k]);
+        const results: Array<[TypeORMVectorStoreDocument, number]> = [];
+        for (const doc of documents) {
+            if (doc._distance != null && doc.pageContent != null) {
+                const document = new TypeORMVectorStoreDocument(doc);
+                document.id = doc.id;
+                results.push([document, doc._distance]);
+            }
+        }
+        return results;
+    };
 }
+   
+
 
 /**
  * Filters given object for translation related properties.

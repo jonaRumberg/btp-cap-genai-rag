@@ -4,7 +4,7 @@
     xmlns:core="sap.ui.core"
     core:require="{ formatter: 'aisaas/ui/model/formatter' }"
 >
-    <Panel expandable="true" expanded="false" stickyHeader="true">
+    <Panel expandable="true" expanded="false" stickyHeader="true" headerText="{mail/ID}" expand=".onExpand">
         <headerToolbar>
             <Toolbar>
                 <HBox width="100%" alignItems="Center" justifyContent="SpaceBetween">
@@ -35,7 +35,10 @@
             </HBox>
             <HBox class="sapUiTinyMarginTop">
                 <Title width="6rem" titleStyle="H6" text="{i18n>email.titles.message}:" />
-                <Text text="{= !${/translationOn} ? ${mail/body} : ${mail/translation/body} }" />
+                    <VBox>
+                        <Text text="{= !${/translationOn} ? ${mail/body} : ${mail/translation/body} }" />
+                        <Button press=".onIncludeMail" text="{i18n>email.buttons.includeMailInResponse}" type="Emphasized"/>
+                    </VBox>
             </HBox>
             <HBox class="sapUiSmallMarginTop">
                 <Title width="6rem" titleStyle="H6" text="{i18n>email.titles.response}:" />

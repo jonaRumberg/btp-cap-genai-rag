@@ -27,7 +27,7 @@
                                     <VBox alignItems="Center" justifyContent="Center">
                                         <Button
                                             type="Emphasized"
-                                            text="Configure Attributes"
+                                            text=" {i18n>attribute.label.configureAttributes}"
                                             press="onPressNavigate"
                                         />
                                     </VBox>

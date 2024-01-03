@@ -20,20 +20,23 @@ import MessageToast from "sap/m/MessageToast";
 import PageSection from "sap/uxap/ObjectPageSection";
 import Fragment from "sap/ui/core/Fragment";
 import Dialog from "sap/m/Dialog";
+import ODataListBinding from "sap/ui/model/odata/v4/ODataListBinding";
 
-import { Mail, KeyFact, Action, AdditionalAttributesReturn, Rag, ClosestMail } from "../model/entities";
+import { Mail, KeyFact, Action, AdditionalAttributesReturn, ClosestMail } from "../model/entities";
 import Formatter from "../model/formatter";
-import CheckBox from "sap/m/CheckBox";
-import Label from "sap/m/Label";
 
-const MAIL_ANSWERED_FRAGMENT_NAME = "aisaas.ui.view.MailAnsweredDialog";
+
+const MAIL_ANSWERED_FRAGMENT_NAME = "aisaas.ui.view.AddMailDialog";
 const ID_MAIL_ANSWERED_DIALOG = "mailAnsweredDialog";
 const ID_TEXTAREA_OL = "areaOL";
 const ID_TEXTAREA_WL = "areaWL";
 
 export default class EmailDetails extends BaseController {
+
     private mailAnsweredDialog: Dialog;
-    private ragObject: Array<Rag> = [];
+    private openedPanel: string = ""
+    private selectedResponses: Array<string> = []
+    private addedMailsToResponse: Array<Mail> = []
 
     public resetEmailPageState(): void {
         this.scrollToFirstSection();
@@ -64,14 +67,6 @@ export default class EmailDetails extends BaseController {
         const translatedContentBox: HBox = this.byId("headerTranslatedContent") as HBox;
         translatedContentBox.removeAllItems();
         this.createHeaderElements(translatedContentBox, mail, true);
-    }
-    public createCheckBoxes(closestMails: ClosestMail[]): void {
-        const checkboxcontainer: VBox = this.byId("checkboxcontainer") as VBox
-        checkboxcontainer.removeAllItems();
-        this.createCheckBoxesElements(closestMails, checkboxcontainer);
-        for (let i = 1; i <= closestMails.length; i++) {
-            this.ragObject.push({number:i, selected:true})
-        } 
     }
 
     private createHeaderElements(parentBox: HBox, mail: Mail, inTranslatedLanguage: boolean): void {
@@ -152,8 +147,9 @@ export default class EmailDetails extends BaseController {
             actions.map((action: Action) => {
                 const button: Button = new Button({
                     text: action.value,
-                    press: () => this.openMessageDialog(action.value, action.descr)
-                });
+                    press: action.value !== "General Fix" ? () => this.openMessageDialog(action.value, action.descr) : 
+                    () => this.openSimilarMailsDialog()
+                })
                 button.addStyleClass("sapUiSmallMarginEnd");
                 hBox.addItem(button);
             });
@@ -163,6 +159,91 @@ export default class EmailDetails extends BaseController {
         }
     }
 
+    public async openSimilarMailsDialog(){
+        const dialog = this.byId("similarMailDialog") as Dialog
+        const closeButton = new Button({ text: this.getText("buttons.close"), press: () => this.onCloseSimilarMailsDialog()});
+        dialog.setEndButton(closeButton);
+        dialog.open()
+    }
+    
+    public onCloseSimilarMailsDialog(){
+        const localModel: JSONModel = this.getModel() as JSONModel;
+        const dialog = this.byId("similarMailDialog") as Dialog
+
+        localModel.setProperty("/searchKeywordSimilarMails", "")
+        localModel.setProperty("/foundEmails", [])
+
+        dialog.close()
+    }
+
+    public onExpand(event:Event){
+        this.openedPanel = (event.getSource() as Panel).getHeaderText();
+    }
+
+    public onIncludeMail(){
+        const localModel: JSONModel = this.getModel() as JSONModel;
+
+        const selectedMail =  (localModel.getProperty("/similarEmails") as ClosestMail[]).concat(localModel.getProperty("/foundEmails") as ClosestMail[]).find((mail:ClosestMail)=> mail.mail.ID === this.openedPanel)
+        const currentSelectedPanels = this.selectedResponses
+        this.selectedResponses.push(selectedMail.mail.responseBody)
+
+        if(this.selectedResponses.length > currentSelectedPanels.length){
+            MessageToast.show(this.getText("Mail will be Included in the Response"));
+            this.addedMailsToResponse.push(selectedMail.mail)
+            localModel.setProperty("/addedMailsToResponse", this.addedMailsToResponse)
+            const binding: ODataListBinding = (this.byId("addedEmailsList") as List).getBinding("items") as ODataListBinding;
+            binding.refresh()
+        }
+    }
+    public onEmptyFoundMails(event:Event){
+        const localModel: JSONModel = this.getModel() as JSONModel;
+        localModel.setProperty("/foundEmails", [])
+
+        const binding: ODataListBinding = (this.byId("foundEmails") as List).getBinding("items") as ODataListBinding;
+        binding.refresh()
+    }
+
+    public async onSearchSimilarMail(): Promise<void> {
+        const oDataModel = this.getModel("api") as ODataModel;
+        const localModel: JSONModel = this.getModel() as JSONModel;
+        
+        const similarMailDialog = this.byId("similarMailDialog") as Dialog;
+        similarMailDialog.setBusy(true);
+        const httpHeaders: any = oDataModel.getHttpHeaders();
+        
+        try {
+            const response = await fetch(`${CAP_BASE_URL}/findMails`, {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": httpHeaders["X-CSRF-Token"],
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    searchKeywordSimilarMails: localModel.getProperty("/searchKeywordSimilarMails"),
+                    id: localModel.getProperty("/activeEmailId"),
+                })
+            });
+            if (response.ok) {
+                
+                const foundEmails = (Object.values((await response.json())) as ClosestMail[]).map((mail: ClosestMail)=>{
+                    const similarEmailsIDs = (localModel.getProperty("/similarEmails") as ClosestMail[]).map((closestMail: ClosestMail)=>{return closestMail.mail.ID })
+                    if(mail.mail.ID !== localModel.getProperty("/activeEmailId") || ! similarEmailsIDs.includes(mail.mail.ID)){return mail}
+                });
+                console.log(foundEmails)
+                
+                localModel.setProperty("/foundEmails", foundEmails);
+                localModel.setProperty("/busy", false);
+
+                const binding: ODataListBinding = (this.byId("foundEmails") as List).getBinding("items") as ODataListBinding;
+                binding.refresh()
+            }
+        } catch (error) {
+            console.log(error);
+        } finally {
+            similarMailDialog.setBusy(false);
+        }
+    }
+    
     public async openMailAnsweredDialog(responseOL: string, responseWL: string): Promise<void> {
         if (!this.mailAnsweredDialog) {
             await this.initMailAnsweredDialog();
@@ -205,76 +286,6 @@ export default class EmailDetails extends BaseController {
         }
     }
 
-    public createCheckBoxesElements(closestMails: ClosestMail[], checkboxcontainer: VBox){
-        const container: HBox = new HBox({wrap:"Wrap"})
-        if(closestMails.length > 0){
-            const label: Label = new Label({text:"Include Mails in Responce"})
-            checkboxcontainer.addItem(label)
-
-            const allCheckbox = new CheckBox({
-                text: "Select All",
-                selected: `{/allClosestMails}`,
-                select: () => {
-                    this.selectAllCheckBoxes(allCheckbox.getSelected(), closestMails, allCheckbox);
-                }
-            });
-
-            if(closestMails.length > 1){
-                container.addItem(allCheckbox)
-            }
-
-            for (let i = 1; i <= closestMails.length; i++) {
-                const checkbox = new CheckBox({
-                    text: i.toString(),
-                    selected: `{/mail${i}}`, 
-                    select: () => {
-                        this.getSelectedCheckbox({number: i, selected: checkbox.getSelected()}, allCheckbox);
-                    }
-                });
-                container.addItem(checkbox)
-            }
-        }
-        checkboxcontainer.addItem(container)
-    }
-
-    public getSelectedCheckbox(rag: Rag, checkbox: CheckBox){
-        const foundCheckbox = this.ragObject.find((item) => item.number === rag.number);
-        const selectedCheckbox = foundCheckbox !== undefined ? foundCheckbox : undefined;
-
-        if(selectedCheckbox){
-            selectedCheckbox.selected = rag.selected;
-        }
-        else{
-            this.ragObject.push(rag)
-        }
-        this.setAllCheckBoxes(checkbox)
-        
-        return this.ragObject
-    }
-
-    public setAllCheckBoxes(checkbox: CheckBox){
-        const isDifferent = this.ragObject.some((item, _, arr) => arr.some(otherItem => item.selected !== otherItem.selected));
-        if(isDifferent){
-            checkbox.setSelected(false)
-        }
-        else{
-            const modeSelectElements = this.ragObject.every((item: Rag )=> item.selected === true);
-            checkbox.setSelected(modeSelectElements)
-        }
-    }
-
-    public selectAllCheckBoxes(mode: boolean, closestMails: ClosestMail[], checkbox:CheckBox){
-        const localModel: JSONModel = this.getModel() as JSONModel;
-        const allCheckBoxes: string[] = []
-        for (let i = 1; i <= closestMails.length; i++) {
-            allCheckBoxes.push(`/mail${i}`)
-            this.getSelectedCheckbox({number:i, selected: mode}, checkbox)
-        }
-
-        allCheckBoxes.forEach((mailCheckBox: string)=>{
-            localModel.setProperty(mailCheckBox, mode)
-        })
-    }
 
     public async onPressRegenerate(): Promise<void> {
         const oDataModel = this.getModel("api") as ODataModel;
@@ -284,9 +295,6 @@ export default class EmailDetails extends BaseController {
         responsePreparation.setBusy(true);
         const httpHeaders: any = oDataModel.getHttpHeaders();
         
-        const rag: boolean = this.ragObject.some((r: Rag) => r.selected === true)
-        const selectedMails = this.ragObject.filter((rag) => rag.selected).map((rag: Rag)=> {return rag.number})
-
         try {
             const response = await fetch(`${CAP_BASE_URL}/regenerateResponse`, {
                 method: "POST",
@@ -296,7 +304,7 @@ export default class EmailDetails extends BaseController {
                 },
                 body: JSON.stringify({
                     id: localModel.getProperty("/activeEmailId"),
-                    selectedMails: selectedMails,
+                    selectedMails: this.selectedResponses,
                     additionalInformation: localModel.getProperty("/additionalInfo")
                 })
             });
@@ -326,16 +334,6 @@ export default class EmailDetails extends BaseController {
                 null
             );
         }
-    }
-
-    public async onClosestMailSearch(): Promise<void> {
-        if (this.hasResponseChanged()) {
-            await this.openConfirmationDialog(
-                this.getText("confirmationDialog.texts.triggerFilterMessage"),
-                this.applyFilter.bind(this),
-                () => this.restoreSearchFilter()
-            );
-        } else this.applyFilter();
     }
 
     /* To submit response for finalization */

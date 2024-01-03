@@ -59,7 +59,10 @@ export default class Main extends BaseController {
             submittedResponsesIncluded: [],
             responseBody: null,
             translatedResponseBody: null,
-            similarEmails: []
+            similarEmails: [],
+            foundEmails: [],
+            searchKeywordSimilarMails: null, 
+            addedMailsToResponse: []
         });
         this.setModel(model);
     }
@@ -142,7 +145,6 @@ export default class Main extends BaseController {
             .getObject() as EmailObject;
 
         this.emailController.createEmailHeaderContent(emailObject.mail);
-        this.emailController.createCheckBoxes(emailObject.closestMails);
         this.emailController.createSuggestedActions(emailObject.mail.suggestedActions);
         localModel.setProperty("/additionalInfo", null);
         this.setMailCheckboxes(emailObject)

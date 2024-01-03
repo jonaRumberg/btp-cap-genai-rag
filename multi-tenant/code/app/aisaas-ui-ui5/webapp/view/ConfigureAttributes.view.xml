@@ -17,31 +17,27 @@
                     <headerToolbar>
                         <OverflowToolbar id="otbSubheader">
                             <ToolbarSpacer />
-                            <Button id="editButton" text="Edit" type="Transparent"
-                                press="onEdit"  visible="true"/>
-                            <Button id="addButton" text="Add" type="Transparent"
+                            <Button id="addButton" text="{i18n>attribute.button.add}" type="Transparent"
                                 press="openAddAttributeDialog" visible="true"/>
-                            <Button id="saveButton" text="Save the selected changes" type="Transparent"
-                                press="onSave" visible="false"/>
-                            <Button id="cancelButton" text="Cancel" type="Transparent"
+                            <Button id="cancelButton" text="{i18n>attribute.button.cancel}" type="Transparent"
                                 press="onCancel" visible="false"/>
-                            <Button id="deleteButton" text="Delete" type="Transparent"
+                            <Button id="deleteButton" text="{i18n>attribute.button.delete}" type="Transparent"
                                 press="onDeleteAttribute" visible="false" />
                         </OverflowToolbar>
                     </headerToolbar>
             
                     <columns>
                         <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
-                            <Text text="ID" />
+                            <Text text="{i18n>attribute.columns.id}" />
                         </Column>
                         <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
-                            <Text text="Attribute" />
+                            <Text text="{i18n>attribute.columns.attribute}" />
                         </Column>
                         <Column width="auto" minScreenWidth="Tablet" hAlign="Center">
-                            <Text text="Explanation" />
+                            <Text text="{i18n>attribute.columns.explanation} " />
                         </Column>
                         <Column minScreenWidth="Tablet" hAlign="Center" id="valueColumn" >
-                            <Text text="Values" />
+                            <Text text="{i18n>attribute.columns.values}" />
                         </Column>
         
                     </columns>
@@ -62,7 +58,7 @@
                         </cells>
                     </ColumnListItem>
                 </Table>
-                <Button press=".onPressNavigate" text="Go Back" type="Transparent"/>
+                <Button press=".onPressNavigate" text="{i18n>link.goBack}" type="Transparent"/>
             </VBox>
         </content>
         
@@ -72,32 +68,32 @@
             <VBox class="sapUiTinyMarginTopBottom sapUiSmallMarginBeginEnd">
                 <HBox wrap="Wrap">
                     <VBox width="30%" wrap="Wrap">
-                        <Label text="Attribute" showColon="true" />
+                        <Label text="{i18n>attribute.columns.attribute}" showColon="true" />
                         <Input id="attribute" value="{state>/attribute}" class="sapUiTinyMarginTop" placeholder="attribute" />
                     </VBox>
                     <VBox width="70%" wrap="Wrap">
-                        <Label text="Explanation" class="" showColon="true"/>
+                        <Label text="{i18n>attribute.columns.explanation}" class="" showColon="true"/>
                         <Input id="explanation" value="{state>/explanation}" class="sapUiTinyMarginTop" placeholder="explanation" liveChange="setAttributeEnabled" change="setAttributeEnabled"/>
                     </VBox>
                 </HBox>
                 <Title text="Value Types: " class="sapUiMediumMarginTop"/>
                 <RadioButtonGroup id="radioButtonGroup" class="sapUiTinyMarginTop" select="selectButton" >
-                    <RadioButton text="Simple Text" />
-                    <RadioButton text="Value Set" />
-                    <RadioButton text="List" />
-                    <RadioButton text="Number" />
+                    <RadioButton text="{i18n>attribute.radioButton.simpleText}" />
+                    <RadioButton text="{i18n>attribute.radioButton.valueSet}" />
+                    <RadioButton text="{i18n>attribute.radioButton.list}" />
+                    <RadioButton text="{i18n>attribute.radioButton.number}" />
                 </RadioButtonGroup>
 
                 <VBox id="addedValues" visible="false" wrap="Wrap" >
-                    <Title text="Values: "  class="sapUiMediumMarginTop"/>
+                    <Title text="{i18n>attribute.columns.values}:"  class="sapUiMediumMarginTop"/>
                     <VBox alignItems="Center">
                         <Table id="valuesToAdd" width="100%" growing="true" growingThreshold="10" paste="onPaste" >
                             <columns>
                                 <Column minScreenWidth="Tablet" hAlign="Center">
-                                    <Text text="Value" />
+                                    <Text text="{i18n>attribute.values.label}" />
                                 </Column>
                                 <Column minScreenWidth="Tablet" hAlign="Center">
-                                    <Text text="Explanation" />
+                                    <Text text="{i18n>attribute.columns.explanation}" />
                                 </Column>
                             </columns>
                         </Table>
@@ -107,8 +103,8 @@
             </VBox>
         </content>
         <beginButton alignItems="Center">
-            <Button text="Cancel" type="Emphasized" press="onCancelValue" />
-            <Button text="Add Attribute" type="Emphasized" press="onAddAttributes" id="addAttributeButton" enabled="false"/>
+            <Button text="{i18n>attribute.button.cancel}" type="Emphasized" press="onCancelValue" />
+            <Button text="{i18n>attribute.button.addAttribute}" type="Emphasized" press="onAddAttributes" id="addAttributeButton" enabled="false"/>
         </beginButton>
     </Dialog>
     

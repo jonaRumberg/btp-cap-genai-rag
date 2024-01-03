@@ -1,0 +1,14 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:tnt="sap.tnt"
+    xmlns:core="sap.ui.core"
+    core:require="{ formatter: 'aisaas/ui/model/formatter' }"
+>
+   <VBox width="100%" alignItems="Center" justifyContent="SpaceBetween">
+        <Title text="{= ${/translationOn} ? ${mail/translation/subject} : ${mail/subject}}" />
+        <HBox class="sapUiTinyMarginTop">
+            <Title width="6rem" titleStyle="H6" text="{i18n>email.titles.sender}:" />
+            <Text text="{= !${/translationOn} ? ${mail/sender} : ${mail/translation/sender} }" />
+        </HBox>
+    </VBox>
+</core:FragmentDefinition>

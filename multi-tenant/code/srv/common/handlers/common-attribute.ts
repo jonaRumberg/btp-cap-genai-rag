@@ -24,7 +24,6 @@ export default class CommonAttribute extends ApplicationService {
         this.on("getAttributes", this.onGetAttributes);
         this.on("deleteAttribute", this.onDeleteAttributes);
         this.on("addAttributes", this.onAddAttributes);
-        this.on("editAttributes", this.onEditAttributes);
      }
 
     
@@ -79,27 +78,6 @@ export default class CommonAttribute extends ApplicationService {
             return req.error(`Error: ${error?.message}`);
         }
     };
-    private onEditAttributes = async (req: Request): Promise<any> => {
-        try {
-            const { Attributes } = this.entities;
-            const { ids, attributes } = req.data;
-    
-            const updates = attributes.map((attribute: any, index: number) => {
-                const updatedEntity: IAttribute = {
-                    attribute: attribute.attribute,
-                    explanation: attribute.explanation,
-                    valueType: attribute.valueType,
-                    values: attribute.values
-                };
-                return UPDATE.entity(Attributes).where(`ID = '${ids[index]}'`).set(updatedEntity);
-            });
-            await Promise.all(updates);
-        } catch (error: any) {
-            console.error(`Error: ${error?.message}`);
-            return req.error(`Error: ${error?.message}`);
-        }
-    };
-    
 }
 
 

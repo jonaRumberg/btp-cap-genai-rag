@@ -28,7 +28,13 @@ service MailInsightsService @(
     // Add new mails
     action   addMails(mails : array of db.BaseMail, rag : Boolean null)                             returns array of Mails;
     // Regenerate a single response
-    action   regenerateResponse(id : UUID, selectedMails : array of Int16, additionalInformation : String null) returns Mails;
+    action   regenerateResponse(id : UUID, selectedMails : array of String, additionalInformation : String null) returns Mails;
+    // Regenerate similarities for found mails
+    action   findMails(searchKeywordSimilarMails : String, id: String)                              returns {closestMails : array of {
+                                                                                                        similarity : Double;
+                                                                                                        mail : Association to Mails;
+                                                                                                        }
+                                                                                                    };
     // Regenerate insights of all mails
     action   regenerateInsights(rag : Boolean null,attributes: array of db.AdditionalAttribute )    returns Boolean;
     // Translates response to original language

@@ -93,30 +93,13 @@ export default class ConfigureAttribute extends BaseController {
     private getButton(id: string): Button {
         return this.byId(id) as Button;
     }
-
-    public onEdit():void  {
-        this.configureButtonVisibility({
-            editButton: false,
-            addButton: false,
-            cancelButton: true,
-            deleteButton: true,
-            saveButton: false
-        });
-
-        const oTable = this.getTable() 
-        oTable.setMode("MultiSelect")
-
-        const oEditableTemplate = this.byId("inputListitem")
-        this.rebindTable(oEditableTemplate,"Edit");
-    }
   
     public onSelectionChange(): void {
         const oTable = this.getTable()
 
         const hasSelectedItems = oTable.getSelectedItems().length > 0;
         this.configureButtonVisibility( 
-            {editButton:!hasSelectedItems,
-            addButton: !hasSelectedItems,
+            {addButton: !hasSelectedItems,
             cancelButton: hasSelectedItems,
             deleteButton: hasSelectedItems,
             saveButton: hasSelectedItems})
@@ -124,7 +107,6 @@ export default class ConfigureAttribute extends BaseController {
     
     public onCancel(): void{
         this.configureButtonVisibility({
-            editButton: true,
             addButton: true,
             cancelButton: false,
             deleteButton: false,
@@ -192,65 +174,8 @@ export default class ConfigureAttribute extends BaseController {
             radioButtonGroup.setSelectedIndex(-1);
         }
     }
-    public async onSaveAttribute(): Promise<void> {
-        this.configureButtonVisibility({
-            editButton: true,
-            addButton: true,
-            cancelButton: false,
-            deleteButton: false,
-            saveButton: false
-        });
-    
-        const oTable = this.getTable()    
-        try {
-            oTable.setBusy(true);
-    
-            const model = this.getModel("att") as ODataModel;
-            const httpHeaders = model.getHttpHeaders();
-            const selectedItems = oTable.getSelectedItems() as ColumnListItem[];
-    
-            const promises = selectedItems.map(async (selectedItem: ColumnListItem) => {
-                const cell = selectedItem.getCells() as Input[];
-                const changedEntry: AdditionalAttributes = {
-                    attribute: cell[1].getValue(),  explanation: cell[2].getValue(),valueType: this.getRadioButtonText(), values:[]
-                }
-                const id = cell[0].getValue();
-                return { id, changedEntry };
-            });
-    
-            const changedElements = await Promise.all(promises);
-            this.onUpdateAttributeDetailsBinding()
-    
-            const response = await fetch(`${CAP_ATTRIBUTE_URL}/editAttributes`, {
-                method: "POST",
-                headers: {
-                    // @ts-ignore
-                    "X-CSRF-Token": httpHeaders["X-CSRF-Token"],
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    ids: changedElements.map((entry: any) => entry.id),
-                    attributes: changedElements.map((entry: any) => entry.changedEntry)
-                })
-            });
-            
-            if (response.ok) {
-                this.getModel("att").refresh();
-                MessageToast.show("Attribute Edited");
-            } else {
-                MessageToast.show(this.getText("email.texts.genericErrorMessage"));
-            }
-        } catch (error) {
-            console.log(error);
-            MessageToast.show(this.getText("email.texts.genericErrorMessage"));
-        } finally {
-            oTable.setBusy(false)
-        }
-    }
-
     public async onDeleteAttribute(): Promise<void> {
         this.configureButtonVisibility({
-            editButton: true,
             addButton: true,
             cancelButton: false,
             deleteButton: false,
@@ -342,7 +267,6 @@ export default class ConfigureAttribute extends BaseController {
     }
 
     private setVisibilityValueElements(addAttributesButtonEnablement: boolean, addedValuesVisibility: boolean ){
-        
         const addedValues = this.byId("addedValues") as VBox
         const addAttributesButton = this.byId("addAttributeButton") as Button;
 

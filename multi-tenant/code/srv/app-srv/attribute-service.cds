@@ -17,6 +17,5 @@ service AttributeService @(
     action   deleteAttribute(ids : many String)                                                                  returns Boolean;
     // Regenerate a single response
     action   addAttributes(attribute : String, explanation : String, valueType : String, values : array of  db.AttributeExplanation) returns array of Attributes;
-    action   editAttributes(ids : many String, attributes :  array of Attributes)                                returns array of Attributes;
  
 };

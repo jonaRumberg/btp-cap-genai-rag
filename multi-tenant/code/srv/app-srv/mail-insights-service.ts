@@ -3,6 +3,7 @@ import { Request } from "@sap/cds/apis/events";
 
 import CommonMailInsights from "../common/handlers/common-mail-insights";
 import * as aiCore from "../common/utils/ai-core"; 
+import { TypeORMVectorStoreDocument } from "langchain/vectorstores/typeorm";
 
 /**
  * MailInsightsService class extends CommonMailInsights
@@ -27,6 +28,8 @@ export default class MailInsightsService extends CommonMailInsights {
         this.on("regenerateInsights", this.onRegenerateInsights);
         this.on("regenerateResponse", this.onRegenerateResponse);
         this.on("translateResponse", this.onTranslateResponse);
+        this.on("findMails", this.onFindMails);
+
     }
 
     /**
@@ -94,6 +97,52 @@ export default class MailInsightsService extends CommonMailInsights {
             const translation = (await this.translateResponse(response, tenant, mail.languageNameDetermined))
                 .responseBody;
             return translation;
+        } catch (error: any) {
+            console.error(`Error: ${error?.message}`);
+            return req.error(`Error: ${error?.message}`);
+        }
+    };
+
+    private onFindMails = async (req: Request) => {
+        try {
+            const tenant = cds.env?.requires?.multitenancy && req.tenant;
+            const { searchKeywordSimilarMails, id } = req.data;
+            const { Mails } = this.entities;
+
+            const mailsLength = (await SELECT.from(Mails).columns("ID") as string[]).length
+            const foundMailsSimilaritiesIDs = await this.getFoundMail(id, mailsLength, searchKeywordSimilarMails, {}, tenant)
+
+            const foundMails =
+                foundMailsSimilaritiesIDs.length > 0
+                    ? await SELECT.from(Mails, (m: any) => {
+                          m.ID;
+                          m.subject;
+                          m.body;
+                          m.category;
+                          m.sender;
+                          m.responded;
+                          m.responseBody;
+                          m.translation((t: any) => {
+                              t`.*`;
+                          });
+                      }).where({
+                          ID: {
+                              in: foundMailsSimilaritiesIDs.map(
+                                  ([doc, _distance]: [TypeORMVectorStoreDocument, number]) => doc.metadata.id
+                              )
+                          }
+                      })
+                    : [];
+
+            const foundMailsWithSimilarity: { similarity: number; mail: any } = foundMails.map((mail: any) => {
+                //@ts-ignore
+                const [_, _distance]: [TypeORMVectorStoreDocument, number] = closestMailsIDs.find(
+                    ([doc, _distance]: [TypeORMVectorStoreDocument, number]) => mail.ID === doc.metadata.id
+                );
+                return { similarity: 1.0 - _distance, mail: mail };
+            });
+
+            return foundMailsWithSimilarity
         } catch (error: any) {
             console.error(`Error: ${error?.message}`);
             return req.error(`Error: ${error?.message}`);
