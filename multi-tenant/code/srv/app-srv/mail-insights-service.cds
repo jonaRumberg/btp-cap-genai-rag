@@ -29,7 +29,7 @@ service MailInsightsService @(
     action   addMails(mails : array of db.BaseMail, rag : Boolean null)                             returns array of Mails;
     // Regenerate a single response
     action   regenerateResponse(id : UUID, selectedMails : array of String, additionalInformation : String null) returns Mails;
-    // Regenerate similarities for found mails
+    // Regenerate similarities for found mails. Probably will make some errors. Please reach out to me, and I will fix that
     action   findMails(searchKeywordSimilarMails : String, id: String)                              returns {closestMails : array of {
                                                                                                         similarity : Double;
                                                                                                         mail : Association to Mails;

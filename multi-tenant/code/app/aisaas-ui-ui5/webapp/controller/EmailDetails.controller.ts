@@ -24,6 +24,8 @@ import ODataListBinding from "sap/ui/model/odata/v4/ODataListBinding";
 
 import { Mail, KeyFact, Action, AdditionalAttributesReturn, ClosestMail } from "../model/entities";
 import Formatter from "../model/formatter";
+import Context from "sap/ui/model/Context";
+import Control from "sap/ui/core/Control";
 
 
 const MAIL_ANSWERED_FRAGMENT_NAME = "aisaas.ui.view.AddMailDialog";
@@ -173,17 +175,26 @@ export default class EmailDetails extends BaseController {
         localModel.setProperty("/searchKeywordSimilarMails", "")
         localModel.setProperty("/foundEmails", [])
 
+        const similarEmails = this.byId("similarEmails") as List
+
+        similarEmails.getItems().forEach((item: ListItemBase)=>{
+            if(item instanceof CustomListItem){
+                item.getContent().forEach((item: Control)=>{if(item instanceof Panel){item.setExpanded(false)}})
+            }
+        })
+
         dialog.close()
     }
 
     public onExpand(event:Event){
+        //Probably will make some errors. Please reach out to me, and I will fix that
         this.openedPanel = (event.getSource() as Panel).getHeaderText();
     }
 
     public onIncludeMail(){
         const localModel: JSONModel = this.getModel() as JSONModel;
 
-        const selectedMail =  (localModel.getProperty("/similarEmails") as ClosestMail[]).concat(localModel.getProperty("/foundEmails") as ClosestMail[]).find((mail:ClosestMail)=> mail.mail.ID === this.openedPanel)
+        const selectedMail = (localModel.getProperty("/similarEmails") as ClosestMail[]).concat(localModel.getProperty("/foundEmails") as ClosestMail[]).find((mail:ClosestMail)=> mail.mail.ID === this.openedPanel)
         const currentSelectedPanels = this.selectedResponses
         this.selectedResponses.push(selectedMail.mail.responseBody)
 
@@ -229,6 +240,7 @@ export default class EmailDetails extends BaseController {
                     const similarEmailsIDs = (localModel.getProperty("/similarEmails") as ClosestMail[]).map((closestMail: ClosestMail)=>{return closestMail.mail.ID })
                     if(mail.mail.ID !== localModel.getProperty("/activeEmailId") || ! similarEmailsIDs.includes(mail.mail.ID)){return mail}
                 });
+                //Probably will make some errors. Please reach out to me, and I will fix that
                 console.log(foundEmails)
                 
                 localModel.setProperty("/foundEmails", foundEmails);

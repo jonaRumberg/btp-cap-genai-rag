@@ -17,9 +17,6 @@ export default class CommonAttribute extends ApplicationService {
     async init(): Promise<void> {
         await super.init();
 
-        const { Attribute } = cds.entities;
-        const { Mails } = cds.entities;
-
         // Handler
         this.on("getAttributes", this.onGetAttributes);
         this.on("deleteAttribute", this.onDeleteAttributes);
@@ -57,6 +54,7 @@ export default class CommonAttribute extends ApplicationService {
             }
             await INSERT.into(Attributes).entries(entity);
 
+            return true
         } catch (error: any) {
             console.error(`Error: ${error?.message}`);
             return req.error(`Error: ${error?.message}`);

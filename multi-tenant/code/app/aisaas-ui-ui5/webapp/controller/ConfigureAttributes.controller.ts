@@ -5,7 +5,7 @@ import Input from "sap/m/Input";
 import MessageToast from "sap/m/MessageToast";
 import Table from "sap/m/Table";
 import ColumnListItem from "sap/m/ColumnListItem";
-import { AdditionalAttributes, AttributeExplanation } from "ui/model/entities";
+import { AttributeExplanation } from "ui/model/entities";
 import ODataModel from "sap/ui/model/odata/v4/ODataModel";
 import VBox from "sap/m/VBox";
 import Text from "sap/m/Text";
@@ -84,50 +84,7 @@ export default class ConfigureAttribute extends BaseController {
         this.setVisibilityValueElements(false, false)
         dialog.close()
     }
-
-    private configureButtonVisibility(buttonsVisibility: Record<string, boolean>): void {
-        for (const [id, visibility] of Object.entries(buttonsVisibility)) {
-            this.getButton(id).setVisible(visibility);
-        }
-    }
-    private getButton(id: string): Button {
-        return this.byId(id) as Button;
-    }
-  
-    public onSelectionChange(): void {
-        const oTable = this.getTable()
-
-        const hasSelectedItems = oTable.getSelectedItems().length > 0;
-        this.configureButtonVisibility( 
-            {addButton: !hasSelectedItems,
-            cancelButton: hasSelectedItems,
-            deleteButton: hasSelectedItems,
-            saveButton: hasSelectedItems})
-    }
     
-    public onCancel(): void{
-        this.configureButtonVisibility({
-            addButton: true,
-            cancelButton: false,
-            deleteButton: false,
-            saveButton: false
-        });
-
-        const columnListItem = this.byId("columnListitem") 
-        this.rebindTable(columnListItem,"Navigation");
-        const oTable = this.getTable()        
-        oTable.setMode("None")
-    }
-
-    public rebindTable(template:any , sKeyboardMode: string) {
-        const oTable = this.getTable()
-        oTable.bindItems({
-            path: "att>/Attributes",
-            template: template,
-            templateShareable: true,
-            key: "ID"
-        });
-    }
     private getAttributeAndExplanationInput(){
         const attributeInput = this.byId("attribute") as Input
         const explanationInput = this.byId("explanation") as Input
@@ -175,49 +132,63 @@ export default class ConfigureAttribute extends BaseController {
         }
     }
     public async onDeleteAttribute(): Promise<void> {
-        this.configureButtonVisibility({
-            addButton: true,
-            cancelButton: false,
-            deleteButton: false,
-            saveButton: false
-        });
-    
         const oTable = this.getTable()
+        oTable.setMode("MultiSelect")
 
-        try {
-            const oDataModel = this.getModel("att") as ODataModel;
-            const httpHeaders = oDataModel.getHttpHeaders();
+        const addButton = this.byId("addButton") as Button
+        const cancelButton = this.byId("cancelButton") as Button
+
+        if(oTable.getMode() === "MultiSelect"){
+            addButton.setVisible(false)
+            cancelButton.setVisible(true)
             const selectedItems = oTable.getSelectedItems() as ColumnListItem[];
 
-           
-            const ids: string[]= selectedItems.map((selectedItem: ColumnListItem) => {
-                const id = selectedItem.getCells()[0] as Input;   
-                return id.getValue()
-            });
-    
-            const response = await fetch(`${CAP_ATTRIBUTE_URL}/deleteAttribute`, {
-                method: "POST",
-                headers: {
-                    // @ts-ignore
-                    "X-CSRF-Token": httpHeaders["X-CSRF-Token"],
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                   ids: ids
-                })
-            });
-    
-            if (response.ok) {
-                MessageToast.show(this.getText("Attribute has been deleted"));
-                this.getModel("att").refresh();
-            } else {
-                MessageToast.show(this.getText("email.texts.genericErrorMessage"));
+            if(selectedItems.length > 0){
+                try {
+                    const oDataModel = this.getModel("att") as ODataModel;
+                    const httpHeaders = oDataModel.getHttpHeaders();
+                    
+                    const ids: string[]= selectedItems.map((selectedItem: ColumnListItem) => {
+                        return (selectedItem.getCells()[0] as Text).getText(true)
+                    });
+            
+                    const response = await fetch(`${CAP_ATTRIBUTE_URL}/deleteAttribute`, {
+                        method: "POST",
+                        headers: {
+                            // @ts-ignore
+                            "X-CSRF-Token": httpHeaders["X-CSRF-Token"],
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                           ids: ids
+                        })
+                    });
+                    if (response.ok) {
+                        MessageToast.show(this.getText("Attribute has been deleted"));
+                        this.getModel("att").refresh();
+                        addButton.setVisible(true)
+                    } else {
+                        MessageToast.show(this.getText("email.texts.genericErrorMessage"));
+                    }
+                } catch (error) {
+                    console.log(error);
+                    MessageToast.show(this.getText("email.texts.genericErrorMessage"));
+                }
+
             }
-        } catch (error) {
-            console.log(error);
-            MessageToast.show(this.getText("email.texts.genericErrorMessage"));
         }
     };
+
+    public onCancelDeleteMode(){
+        const cancelButton = this.byId("cancelButton") as Button
+        const addButton = this.byId("addButton") as Button
+
+        cancelButton.setVisible(false)
+        addButton.setVisible(true)
+
+        const oTable = this.getTable()
+        oTable.setMode("None")
+    }
     
     private getRadioButtonText(): string{
         return this.getRadioButtonGroup().getSelectedButton().getText() as string
@@ -239,7 +210,6 @@ export default class ConfigureAttribute extends BaseController {
     }
 
     public onAddValue(){
-        this.setVisibilityValueElements(true, true)
         const valuesBox = this.getInputValuesTemplateBox()
 
         const valuesInput = new Input({ placeholder: "Value", width:"100%" });
@@ -310,6 +280,7 @@ export default class ConfigureAttribute extends BaseController {
         });
 
         valueTable.addItem(oRow);
+
         const inputBox = this.getInputValuesTemplateBox();
 
         valuesBox.setVisible(true)

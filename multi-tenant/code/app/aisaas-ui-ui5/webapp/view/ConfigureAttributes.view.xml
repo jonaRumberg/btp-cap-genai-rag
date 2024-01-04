@@ -13,16 +13,16 @@
         <content>
             <VBox  alignItems="Center" justifyContent="SpaceBetween">
                 <Table id="attributeTable" growing="true" 
-                growingThreshold="10" paste="onPaste" items="{att/Attributes}" selectionChange="onSelectionChange">
+                growingThreshold="10" items="{att/Attributes}" selectionChange="onSelectionChange">
                     <headerToolbar>
                         <OverflowToolbar id="otbSubheader">
                             <ToolbarSpacer />
                             <Button id="addButton" text="{i18n>attribute.button.add}" type="Transparent"
-                                press="openAddAttributeDialog" visible="true"/>
+                                press="openAddAttributeDialog"/>
+                            <Button text="{i18n>attribute.button.delete}" type="Transparent"
+                                press="onDeleteAttribute"/>
                             <Button id="cancelButton" text="{i18n>attribute.button.cancel}" type="Transparent"
-                                press="onCancel" visible="false"/>
-                            <Button id="deleteButton" text="{i18n>attribute.button.delete}" type="Transparent"
-                                press="onDeleteAttribute" visible="false" />
+                                press="onCancelDeleteMode" visible="false"/>
                         </OverflowToolbar>
                     </headerToolbar>
             
@@ -41,6 +41,7 @@
                         </Column>
         
                     </columns>
+
                     <ColumnListItem vAlign="Middle" id="columnListitem" >
                         <cells>
                             <ObjectIdentifier text="{att>ID}" />
@@ -49,6 +50,7 @@
                             <Text text="{ path: 'att>values', formatter: 'formatter.formatValues', targetType: 'any', mode : 'OneTime'}" />
                         </cells>
                     </ColumnListItem>
+
                     <ColumnListItem vAlign="Middle" id="inputListitem" >
                         <cells>
                             <Input value="{att>ID}" editable="false" />
@@ -57,6 +59,7 @@
                             <Input value="{ path: 'att>values', formatter: 'formatter.formatValues', targetType: 'any', mode : 'OneTime'}" />
                         </cells>
                     </ColumnListItem>
+
                 </Table>
                 <Button press=".onPressNavigate" text="{i18n>link.goBack}" type="Transparent"/>
             </VBox>

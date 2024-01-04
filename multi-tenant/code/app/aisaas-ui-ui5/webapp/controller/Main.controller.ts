@@ -124,6 +124,7 @@ export default class Main extends BaseController {
     public setActiveEmail(id: string = null): void {
         const localModel: JSONModel = this.getModel() as JSONModel;
         localModel.setProperty("/activeEmailId", id);
+        localModel.setProperty("/addedMailsToResponse", []);
 
         if (id) {
             const bindingInfo: ObjectBindingInfo = {
