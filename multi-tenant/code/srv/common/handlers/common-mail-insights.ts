@@ -125,7 +125,7 @@ export default class CommonMailInsights extends ApplicationService {
                 };
             });
 
-            const closestMailsIDs = await this.getClosestMails(id, 5, {}, tenant);
+            const closestMailsIDs = await this.getClosestMails(id, 5, tenant);
             const closestMails =
                 closestMailsIDs.length > 0
                     ? await SELECT.from(Mails, (m: any) => {
@@ -183,18 +183,12 @@ export default class CommonMailInsights extends ApplicationService {
             // Embed mail bodies with IDs
             console.log("EMBED MAILS WITH IDs...");
 
-            //temporare fix
-            const oldMails = await SELECT.from(Mails)
-
             await (await this.getVectorStore(tenant)).addDocuments(
-
-                oldMails.map((mail: IStoredMail) => ({
+                mailBatch.map((mail: IStoredMail) => ({
                     pageContent: mail.body,
                     metadata: { id: mail.ID }
                 }))
             );
-
-            console.log("EMBED MAILS WITH IDs...");
 
             const insertedMails = await SELECT.from(Mails, (m: any) => {
                 m`.*`;
@@ -835,7 +829,6 @@ export default class CommonMailInsights extends ApplicationService {
     public getClosestMails = async (
         id: string,
         k: number = 5,
-        filter: any = {},
         tenant?: string
     ): Promise<Array<[TypeORMVectorStoreDocument, number]>> => {
         const typeormVectorStore = await this.getVectorStore(tenant);
@@ -862,23 +855,19 @@ export default class CommonMailInsights extends ApplicationService {
 
     public getFoundMail = async (
         id: string,
-        k: number = 5,
         searchKeywordSimilarMails: string = "", 
-        filter: any = {},
         tenant?: string
     ): Promise<Array<[TypeORMVectorStoreDocument, number]>> => {
         const typeormVectorStore = await this.getVectorStore(tenant);
-
         const queryString = `
         SELECT x.id, x."pageContent", x.metadata, x.embedding <=> focus.embedding as _distance from ${typeormVectorStore.tableName} as x
         join (SELECT * from ${typeormVectorStore.tableName} where (metadata->'id')::jsonb ? $1) as focus
         on focus.id != x.id
-        WHERE x.metadata @> $2 AND 
-        x."pageContent" LIKE $3
-        ORDER BY _distance LIMIT $4;
+        WHERE x."pageContent" LIKE '%${searchKeywordSimilarMails}%'
+        ORDER BY _distance;
         `;
 
-        const documents = await typeormVectorStore.appDataSource.query(queryString, [id, filter, `'${searchKeywordSimilarMails}'`,  k]);
+        const documents = await typeormVectorStore.appDataSource.query(queryString, [id]);
         const results: Array<[TypeORMVectorStoreDocument, number]> = [];
         for (const doc of documents) {
             if (doc._distance != null && doc.pageContent != null) {
@@ -887,6 +876,7 @@ export default class CommonMailInsights extends ApplicationService {
                 results.push([document, doc._distance]);
             }
         }
+        console.log(results)
         return results;
     };
 }

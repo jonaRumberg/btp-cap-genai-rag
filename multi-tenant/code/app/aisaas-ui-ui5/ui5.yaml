@@ -35,5 +35,5 @@ server:
       afterMiddleware: compression
       mountPath: /api
       configuration:
-        baseUri: "http://localhost:4004"
+        baseUri: "http://localhost:60349"
     

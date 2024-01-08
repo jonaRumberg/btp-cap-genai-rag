@@ -108,14 +108,11 @@ export default class MailInsightsService extends CommonMailInsights {
             const tenant = cds.env?.requires?.multitenancy && req.tenant;
             const { searchKeywordSimilarMails, id } = req.data;
             const { Mails } = this.entities;
-            console.log(searchKeywordSimilarMails, id , 89898)
 
-            const mailsLength = (await SELECT.from(Mails).columns("ID") as string[]).length
-            console.log(mailsLength)
-            const foundMailsSimilaritiesIDs = await this.getFoundMail(id, mailsLength, searchKeywordSimilarMails, tenant)
+            const foundEmailsSimilaritiesIDs = await this.getFoundMail(id, searchKeywordSimilarMails, tenant)
 
-            const foundMails =
-                foundMailsSimilaritiesIDs.length > 0
+            const foundEmails =
+                foundEmailsSimilaritiesIDs.length > 0
                     ? await SELECT.from(Mails, (m: any) => {
                           m.ID;
                           m.subject;
@@ -129,25 +126,22 @@ export default class MailInsightsService extends CommonMailInsights {
                           });
                       }).where({
                           ID: {
-                              in: foundMailsSimilaritiesIDs.map(
+                              in: foundEmailsSimilaritiesIDs.map(
                                   ([doc, _distance]: [TypeORMVectorStoreDocument, number]) => doc.metadata.id
                               )
                           }
                       })
                     : [];
-            console.log(foundMails , 122)
 
-            const foundMailsWithSimilarity: { similarity: number; mail: any } = foundMails.map((mail: any) => {
+            const foundEmailsWithSimilarity: { similarity: number; mail: any } = foundEmails.map((mail: any) => {
                 //@ts-ignore
-                const [_, _distance]: [TypeORMVectorStoreDocument, number] = closestMailsIDs.find(
+                const [_, _distance]: [TypeORMVectorStoreDocument, number] = foundEmailsSimilaritiesIDs.find(
                     ([doc, _distance]: [TypeORMVectorStoreDocument, number]) => mail.ID === doc.metadata.id
                 );
                 return { similarity: 1.0 - _distance, mail: mail };
             });
-            console.log(foundMailsWithSimilarity , 2222)
 
-
-            return foundMailsWithSimilarity
+            return foundEmailsWithSimilarity
         } catch (error: any) {
             console.error(`Error: ${error?.message}`);
             return req.error(`Error: ${error?.message}`);

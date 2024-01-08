@@ -195,7 +195,7 @@ export default class EmailDetails extends BaseController {
         const currentSelectedPanelsLength = this.selectedResponses.length
 
 
-        const selectedMail = (localModel.getProperty("/similarEmails") as ClosestMail[]).concat(localModel.getProperty("/foundEmails") as ClosestMail[]).find((mail:ClosestMail)=> mail.mail.ID === this.openedPanel)
+        const selectedMail = (localModel.getProperty("/similarEmails") as ClosestMail[]).concat(localModel.getProperty("/foundEmailsList") as ClosestMail[]).find((mail:ClosestMail)=> mail.mail.ID === this.openedPanel)
         this.selectedResponses.push(selectedMail.mail.responseBody)
 
         if(this.selectedResponses.length > currentSelectedPanelsLength){
@@ -219,20 +219,19 @@ export default class EmailDetails extends BaseController {
         const localModel: JSONModel = this.getModel() as JSONModel;
         localModel.setProperty("/foundEmails", [])
 
-        const binding: ODataListBinding = (this.byId("foundEmails") as List).getBinding("items") as ODataListBinding;
+        const binding: ODataListBinding = (this.byId("foundEmailsList") as List).getBinding("items") as ODataListBinding;
         binding.refresh()
     }
 
     public async onSearchSimilarMail(): Promise<void> {
         const oDataModel = this.getModel("api") as ODataModel;
         const localModel: JSONModel = this.getModel() as JSONModel;
+        const httpHeaders: any = oDataModel.getHttpHeaders();
         
         const similarMailDialog = this.byId("similarMailDialog") as Dialog;
         similarMailDialog.setBusy(true);
-        const httpHeaders: any = oDataModel.getHttpHeaders();
-        console.log(localModel.getProperty("/searchKeywordSimilarMails"), localModel.getProperty("/activeEmailId") )
-        console.log(localModel.getProperty("/foundEmails"))
-        console.log(this.openedPanel, this.addedMailsToResponse)
+
+        const filterMails = (localModel.getProperty("/similarEmails") as ClosestMail[]).map((closestMail: ClosestMail)=>closestMail.mail.ID).push(localModel.getProperty("/activeEmailId"))
         try {
             const response = await fetch(`${CAP_BASE_URL}/findMails`, {
                 method: "POST",
@@ -241,23 +240,23 @@ export default class EmailDetails extends BaseController {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    searchKeywordSimilarMails: localModel.getProperty("/searchKeywordSimilarMails"),
-                    id: localModel.getProperty("/activeEmailId"),
+                    searchKeywordSimilarMails: (localModel.getProperty("/searchKeywordSimilarMails") as string),
+                    id: (localModel.getProperty("/activeEmailId") as string)
                 })
             });
             if (response.ok) {
-                console.log(await response.json())
-                const foundEmails = (Object.values((await response.json())) as ClosestMail[]).map((mail: ClosestMail)=>{
-                    const similarEmailsIDs = (localModel.getProperty("/similarEmails") as ClosestMail[]).map((closestMail: ClosestMail)=>{return closestMail.mail.ID })
-                    if(mail.mail.ID !== localModel.getProperty("/activeEmailId") || ! similarEmailsIDs.includes(mail.mail.ID)){return mail}
+                const similarEmailsIDs = (localModel.getProperty("/similarEmails") as ClosestMail[]).map((closestMail: ClosestMail)=>closestMail.mail.ID)
+
+                const foundEmails = (Object.values(await response.json())[1] as ClosestMail[]).filter((mail: ClosestMail)=>{
+                   if(mail.mail.ID !== localModel.getProperty("/activeEmailId") && ! similarEmailsIDs.includes(mail.mail.ID)){
+                        return mail
+                    }
                 });
-                //Probably will make some errors. Please reach out to me, and I will fix that
-                console.log(foundEmails)
-                
+
                 localModel.setProperty("/foundEmails", foundEmails);
                 localModel.setProperty("/busy", false);
 
-                const binding: ODataListBinding = (this.byId("foundEmails") as List).getBinding("items") as ODataListBinding;
+                const binding: ODataListBinding = (this.byId("foundEmailsList") as List).getBinding("items") as ODataListBinding;
                 binding.refresh()
             }
         } catch (error) {

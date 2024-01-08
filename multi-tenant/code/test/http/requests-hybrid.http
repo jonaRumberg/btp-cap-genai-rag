@@ -159,7 +159,7 @@ Authorization: Bearer {{token}}
 @id = {{getMails.response.body.$.[0].ID}}
 
 # @name regenerateResponse
-POST http://localhost:4004/odata/v4/mail-insights/regenerateResponse
+POST http://localhost:60349/odata/v4/mail-insights/regenerateResponse
 content-type: application/json
 Authorization: Bearer {{token}}
 
@@ -175,7 +175,7 @@ Authorization: Bearer {{token}}
 @id = {{getMails.response.body.$.[0].ID}}
 
 # @name translateResponse
-POST http://localhost:4004/odata/v4/mail-insights/translateResponse
+POST http://localhost:60349/odata/v4/mail-insights/translateResponse
 content-type: application/json
 Authorization: Bearer {{token}}
 
@@ -190,7 +190,7 @@ Authorization: Bearer {{token}}
 @id = {{getMails.response.body.$.[0].ID}}
 
 # @name submitResponse
-POST http://localhost:4004/odata/v4/mail-insights/submitResponse
+POST http://localhost:60349/odata/v4/mail-insights/submitResponse
 content-type: application/json
 Authorization: Bearer {{token}}
 

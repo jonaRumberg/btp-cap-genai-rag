@@ -256,10 +256,10 @@
                     </CustomListItem>
                 </List>
                 <List
-                    id="foundEmails"
+                    id="foundEmailsList"
                     showSeparators="None"
                     mode="SingleSelectMaster"
-                    visible="{= ${/foundMails}.length > 0}"
+                    visible="{= ${/foundEmails}.length > 0}"
                     noDataText="{i18n>email.list.noData}"
                     items="{
                         path: '/foundEmails',
@@ -275,8 +275,5 @@
                 </List>
             </VBox>
         </content>
-        <beginButton>
-            <Button text="{i18n>email.buttons.confirm}" type="Emphasized" press="onAddMail" />
-        </beginButton>
     </Dialog>
 </mvc:View>

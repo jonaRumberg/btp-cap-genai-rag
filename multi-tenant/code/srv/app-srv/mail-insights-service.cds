@@ -30,10 +30,9 @@ service MailInsightsService @(
     // Regenerate a single response
     action   regenerateResponse(id : UUID, selectedMails : array of String, additionalInformation : String null) returns Mails;
     // Regenerate similarities for found mails. Probably will make some errors. Please reach out to me, and I will fix that
-    action   findMails(searchKeywordSimilarMails : String, id: String)                              returns {closestMails : array of {
+    action   findMails(searchKeywordSimilarMails : String, id: String)                              returns array of {
                                                                                                         similarity : Double;
                                                                                                         mail : Association to Mails;
-                                                                                                        }
                                                                                                     };
     // Regenerate insights of all mails
     action   regenerateInsights(rag : Boolean null,attributes: array of db.AdditionalAttribute )    returns Boolean;
