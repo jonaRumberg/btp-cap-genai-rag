@@ -149,7 +149,7 @@ export const chatCompletion = async (
  * @returns {Promise<number[][]>} - The embeddings
  */
 export const embed = async (texts: Array<string>, tenant?: string, EmbeddingParams: {} = {}): Promise<number[][]> => {
-    const resourceGroupId = tenant && tenant !== "_main" ? `${tenant}-${getAppName()}` : `default-${getAppName()}`;
+    const resourceGroupId = 'default'//tenant && tenant !== "_main" ? `${tenant}-${getAppName()}` : `default-${getAppName()}`;
     const deploymentId = await getDeploymentId(resourceGroupId, Tasks.EMBEDDING);
     if (deploymentId) {
         const aiCoreService = await cds.connect.to(AI_CORE_DESTINATION);

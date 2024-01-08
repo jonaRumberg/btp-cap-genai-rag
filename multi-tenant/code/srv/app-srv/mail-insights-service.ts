@@ -108,9 +108,11 @@ export default class MailInsightsService extends CommonMailInsights {
             const tenant = cds.env?.requires?.multitenancy && req.tenant;
             const { searchKeywordSimilarMails, id } = req.data;
             const { Mails } = this.entities;
+            console.log(searchKeywordSimilarMails, id , 89898)
 
             const mailsLength = (await SELECT.from(Mails).columns("ID") as string[]).length
-            const foundMailsSimilaritiesIDs = await this.getFoundMail(id, mailsLength, searchKeywordSimilarMails, {}, tenant)
+            console.log(mailsLength)
+            const foundMailsSimilaritiesIDs = await this.getFoundMail(id, mailsLength, searchKeywordSimilarMails, tenant)
 
             const foundMails =
                 foundMailsSimilaritiesIDs.length > 0
@@ -133,6 +135,7 @@ export default class MailInsightsService extends CommonMailInsights {
                           }
                       })
                     : [];
+            console.log(foundMails , 122)
 
             const foundMailsWithSimilarity: { similarity: number; mail: any } = foundMails.map((mail: any) => {
                 //@ts-ignore
@@ -141,6 +144,8 @@ export default class MailInsightsService extends CommonMailInsights {
                 );
                 return { similarity: 1.0 - _distance, mail: mail };
             });
+            console.log(foundMailsWithSimilarity , 2222)
+
 
             return foundMailsWithSimilarity
         } catch (error: any) {

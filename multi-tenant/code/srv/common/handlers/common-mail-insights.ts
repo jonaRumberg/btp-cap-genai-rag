@@ -183,8 +183,12 @@ export default class CommonMailInsights extends ApplicationService {
             // Embed mail bodies with IDs
             console.log("EMBED MAILS WITH IDs...");
 
+            //temporare fix
+            const oldMails = await SELECT.from(Mails)
+
             await (await this.getVectorStore(tenant)).addDocuments(
-                mailBatch.map((mail: IStoredMail) => ({
+
+                oldMails.map((mail: IStoredMail) => ({
                     pageContent: mail.body,
                     metadata: { id: mail.ID }
                 }))
@@ -840,11 +844,11 @@ export default class CommonMailInsights extends ApplicationService {
         SELECT x.id, x."pageContent", x.metadata, x.embedding <=> focus.embedding as _distance from ${typeormVectorStore.tableName} as x
         join (SELECT * from ${typeormVectorStore.tableName} where (metadata->'id')::jsonb ? $1) as focus
         on focus.id != x.id
-        WHERE x.metadata @> $2
-        ORDER BY _distance LIMIT $3;
+        --WHERE x.metadata @> $2
+        ORDER BY _distance LIMIT $2;
         `;
 
-        const documents = await typeormVectorStore.appDataSource.query(queryString, [id, filter, k]);
+        const documents = await typeormVectorStore.appDataSource.query(queryString, [id, k]);
         const results: Array<[TypeORMVectorStoreDocument, number]> = [];
         for (const doc of documents) {
             if (doc._distance != null && doc.pageContent != null) {

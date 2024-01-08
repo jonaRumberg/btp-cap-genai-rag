@@ -178,14 +178,7 @@
                 <ux:subSections>
                     <ux:ObjectPageSubSection
                         title="{i18n>email.titles.similarEmails} ({/similarEmails/length})">
-                        <VBox class=" sapUiTinyMarginTop sapUiMediumMarginEnd" fitContainer="true" >
-                            <SearchField
-                                value="{/searchClostestMailKeyWord}"
-                                placeholder="Search for Mails to Include in Responce"
-                                search="onClosestMailSearch"
-                            />
-                        </VBox>
-
+    
                         <VBox class="sapUiTinyMarginBeginEnd sapUiMediumMarginTop" id="checkboxcontainer" />
 
                     </ux:ObjectPageSubSection>
@@ -229,8 +222,9 @@
                 <List
                     id="addedEmailsList"
                     mode="SingleSelectMaster"
+                    class="sapUiTinyMarginTop"
                     showSeparators="Inner"
-                    visible="{= ${/addedMailsToResponse}.length > 1 }"
+                    visible="{= ${/addedMailsToResponse}.length > 0 }"
                     noDataText="{i18n>email.list.noData}"
                     items="{
                         path: '/addedMailsToResponse'
@@ -244,10 +238,11 @@
                     </CustomListItem>
                 </List>
                 <List
-                    id="foundEmailsList"
+                    id="similarEmailsList"
                     showSeparators="None"
                     mode="SingleSelectMaster"
                     noDataText="{i18n>email.list.noData}"
+                    visible="{= ${/similarEmails}.length > 0 }"
                     items="{
                         path: '/similarEmails',
                         sorter: {path: 'similarity', descending: 'false'}
@@ -264,7 +259,7 @@
                     id="foundEmails"
                     showSeparators="None"
                     mode="SingleSelectMaster"
-                    visible="{= ${/foundMails}.length > 1 }"
+                    visible="{= ${/foundMails}.length > 0}"
                     noDataText="{i18n>email.list.noData}"
                     items="{
                         path: '/foundEmails',

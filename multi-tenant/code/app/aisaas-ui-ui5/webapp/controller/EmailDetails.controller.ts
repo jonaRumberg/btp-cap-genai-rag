@@ -24,7 +24,6 @@ import ODataListBinding from "sap/ui/model/odata/v4/ODataListBinding";
 
 import { Mail, KeyFact, Action, AdditionalAttributesReturn, ClosestMail } from "../model/entities";
 import Formatter from "../model/formatter";
-import Context from "sap/ui/model/Context";
 import Control from "sap/ui/core/Control";
 
 
@@ -38,7 +37,7 @@ export default class EmailDetails extends BaseController {
     private mailAnsweredDialog: Dialog;
     private openedPanel: string = ""
     private selectedResponses: Array<string> = []
-    private addedMailsToResponse: Array<Mail> = []
+    private addedMailsToResponse: Array<ClosestMail> = []
 
     public resetEmailPageState(): void {
         this.scrollToFirstSection();
@@ -175,7 +174,7 @@ export default class EmailDetails extends BaseController {
         localModel.setProperty("/searchKeywordSimilarMails", "")
         localModel.setProperty("/foundEmails", [])
 
-        const similarEmails = this.byId("similarEmails") as List
+        const similarEmails = this.byId("similarEmailsList") as List
 
         similarEmails.getItems().forEach((item: ListItemBase)=>{
             if(item instanceof CustomListItem){
@@ -193,17 +192,27 @@ export default class EmailDetails extends BaseController {
 
     public onIncludeMail(){
         const localModel: JSONModel = this.getModel() as JSONModel;
+        const currentSelectedPanelsLength = this.selectedResponses.length
+
 
         const selectedMail = (localModel.getProperty("/similarEmails") as ClosestMail[]).concat(localModel.getProperty("/foundEmails") as ClosestMail[]).find((mail:ClosestMail)=> mail.mail.ID === this.openedPanel)
-        const currentSelectedPanels = this.selectedResponses
         this.selectedResponses.push(selectedMail.mail.responseBody)
 
-        if(this.selectedResponses.length > currentSelectedPanels.length){
-            MessageToast.show(this.getText("Mail will be Included in the Response"));
-            this.addedMailsToResponse.push(selectedMail.mail)
-            localModel.setProperty("/addedMailsToResponse", this.addedMailsToResponse)
-            const binding: ODataListBinding = (this.byId("addedEmailsList") as List).getBinding("items") as ODataListBinding;
-            binding.refresh()
+        if(this.selectedResponses.length > currentSelectedPanelsLength){
+            const mailAdded = this.addedMailsToResponse.some(mail => mail.mail.ID === selectedMail.mail.ID)
+            
+            if(!mailAdded){
+                MessageToast.show("Mail will be Included in the Response");
+                this.addedMailsToResponse.push(selectedMail)
+                console.log(this.addedMailsToResponse, 8888)
+
+                localModel.setProperty("/addedMailsToResponse", this.addedMailsToResponse)
+                const binding: ODataListBinding = (this.byId("addedEmailsList") as List).getBinding("items") as ODataListBinding;
+                binding.refresh()
+            }else{
+                MessageToast.show("Mail already in Response");
+            }
+            
         }
     }
     public onEmptyFoundMails(event:Event){
@@ -221,7 +230,9 @@ export default class EmailDetails extends BaseController {
         const similarMailDialog = this.byId("similarMailDialog") as Dialog;
         similarMailDialog.setBusy(true);
         const httpHeaders: any = oDataModel.getHttpHeaders();
-        
+        console.log(localModel.getProperty("/searchKeywordSimilarMails"), localModel.getProperty("/activeEmailId") )
+        console.log(localModel.getProperty("/foundEmails"))
+        console.log(this.openedPanel, this.addedMailsToResponse)
         try {
             const response = await fetch(`${CAP_BASE_URL}/findMails`, {
                 method: "POST",
@@ -235,7 +246,7 @@ export default class EmailDetails extends BaseController {
                 })
             });
             if (response.ok) {
-                
+                console.log(await response.json())
                 const foundEmails = (Object.values((await response.json())) as ClosestMail[]).map((mail: ClosestMail)=>{
                     const similarEmailsIDs = (localModel.getProperty("/similarEmails") as ClosestMail[]).map((closestMail: ClosestMail)=>{return closestMail.mail.ID })
                     if(mail.mail.ID !== localModel.getProperty("/activeEmailId") || ! similarEmailsIDs.includes(mail.mail.ID)){return mail}
