@@ -59,7 +59,7 @@
         "build:cf": "npm run build:cds && npm run build:ts && npm run cleanup:ts",
         "build:ts": "tsc",
         "build:cds": "cds build --production",
-        "cleanup:ts": "npx rimraf gen/srv/srv/**/*.ts"
+        "cleanup:ts": "npx rimraf --glob gen/srv/srv/**/*.ts"
     },
     "prettier": {
         "arrowParens": "always",

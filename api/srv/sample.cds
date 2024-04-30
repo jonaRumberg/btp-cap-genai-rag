@@ -1,5 +1,6 @@
 using {sample.db as db} from '../db/schema';
 
+
 @requires: 'authenticated-user'
 service SampleService {
     entity Documents as

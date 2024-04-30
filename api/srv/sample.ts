@@ -61,6 +61,7 @@ export default class SampleService extends ApplicationService {
             const documents = await cds.run(
                 `SELECT ID, TEXT, COSINE_SIMILARITY(EMBEDDING, TO_REAL_VECTOR('[${embeddings[0].toString()}]')) as "similarity"
                 FROM "SAMPLE_DB_DOCUMENTS"
+                WHERE COSINE_SIMILARITY(EMBEDDING, TO_REAL_VECTOR('[${embeddings[0].toString()}]')) > 0.75
                 ORDER BY "similarity" DESC LIMIT ?`,
                 [2]
             );
